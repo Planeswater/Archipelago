@@ -13,7 +13,7 @@
 - Une solution logicielle ou matérielle capable de charger et de lancer des fichiers ROM de SNES
     - Un émulateur capable d'éxécuter des scripts Lua
       ([snes9x rr](https://github.com/gocha/snes9x-rr/releases),
-      [BizHawk](http://tasvideos.org/BizHawk.html))
+      [BizHawk](https://tasvideos.org/BizHawk))
     - Un SD2SNES, [FXPak Pro](https://krikzz.com/store/home/54-fxpak-pro.html), ou une autre solution matérielle
       compatible
 - Le fichier ROM de la v1.0 japonaise, sûrement nommé `Zelda no Densetsu - Kamigami no Triforce (Japan).sfc`
@@ -60,7 +60,7 @@ peuvent avoir différentes options.
 
 ### Où est-ce que j'obtiens un fichier YAML ?
 
-La page [Génération de partie](/games/A%20Link%20to%20the%20Past/player-settings) vous permet de configurer vos
+La page [Génération de partie](/games/A%20Link%20to%20the%20Past/player-options) vous permet de configurer vos
 paramètres personnels et de les exporter vers un fichier YAML.
 
 ### Configuration avancée du fichier YAML
@@ -83,11 +83,11 @@ chaque paramètre il faut au moins une option qui soit paramétrée sur un nombr
 ### Vérifier son fichier YAML
 
 Si vous voulez valider votre fichier YAML pour être sûr qu'il fonctionne, vous pouvez le vérifier sur la page du
-[Validateur de YAML](/mysterycheck).
+[Validateur de YAML](/check).
 
 ## Générer une partie pour un joueur
 
-1. Aller sur la page [Génération de partie](/games/A%20Link%20to%20the%20Past/player-settings), configurez vos options,
+1. Aller sur la page [Génération de partie](/games/A%20Link%20to%20the%20Past/player-options), configurez vos options,
    et cliquez sur le bouton "Generate Game".
 2. Il vous sera alors présenté une page d'informations sur la seed, où vous pourrez télécharger votre patch.
 3. Double-cliquez sur le patch et l'émulateur devrait se lancer automatiquement avec la seed. Etant donné que le client

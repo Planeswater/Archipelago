@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import copy
 import logging
 import asyncio
 import urllib.parse
@@ -18,11 +20,12 @@ if __name__ == "__main__":
     Utils.init_logging("TextClient", exception_logger="Client")
 
 from MultiServer import CommandProcessor
-from NetUtils import Endpoint, decode, NetworkItem, encode, JSONtoTextParser, \
-    ClientStatus, Permission, NetworkSlot, RawJSONtoTextParser
+from NetUtils import (Endpoint, decode, NetworkItem, encode, JSONtoTextParser, ClientStatus, Permission, NetworkSlot,
+                      RawJSONtoTextParser, add_json_text, add_json_location, add_json_item, JSONTypes)
 from Utils import Version, stream_input, async_start
 from worlds import network_data_package, AutoWorldRegister
 import os
+import ssl
 
 if typing.TYPE_CHECKING:
     import kvui
@@ -31,6 +34,12 @@ logger = logging.getLogger("Client")
 
 # without terminal, we have to use gui mode
 gui_enabled = not sys.stdout or "--nogui" not in sys.argv
+
+
+@Utils.cache_argsless
+def get_ssl_context():
+    import certifi
+    return ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
 
 
 class ClientCommandProcessor(CommandProcessor):
@@ -63,9 +72,16 @@ class ClientCommandProcessor(CommandProcessor):
 
     def _cmd_received(self) -> bool:
         """List all received items"""
-        self.output(f'{len(self.ctx.items_received)} received items:')
+        item: NetworkItem
+        self.output(f'{len(self.ctx.items_received)} received items, sorted by time:')
         for index, item in enumerate(self.ctx.items_received, 1):
-            self.output(f"{self.ctx.item_names[item.item]} from {self.ctx.player_names[item.player]}")
+            parts = []
+            add_json_item(parts, item.item, self.ctx.slot, item.flags)
+            add_json_text(parts, " from ")
+            add_json_location(parts, item.location, item.player)
+            add_json_text(parts, " by ")
+            add_json_text(parts, item.player, type=JSONTypes.player_id)
+            self.ctx.on_print_json({"data": parts, "cmd": "PrintJSON"})
         return True
 
     def _cmd_missing(self, filter_text = "") -> bool:
@@ -106,6 +122,15 @@ class ClientCommandProcessor(CommandProcessor):
         for item_name in AutoWorldRegister.world_types[self.ctx.game].item_name_to_id:
             self.output(item_name)
 
+    def _cmd_item_groups(self):
+        """List all item group names for the currently running game."""
+        if not self.ctx.game:
+            self.output("No game set, cannot determine existing item groups.")
+            return False
+        self.output(f"Item Group Names for {self.ctx.game}")
+        for group_name in AutoWorldRegister.world_types[self.ctx.game].item_name_groups:
+            self.output(group_name)
+
     def _cmd_locations(self):
         """List all location names for the currently running game."""
         if not self.ctx.game:
@@ -114,6 +139,15 @@ class ClientCommandProcessor(CommandProcessor):
         self.output(f"Location Names for {self.ctx.game}")
         for location_name in AutoWorldRegister.world_types[self.ctx.game].location_name_to_id:
             self.output(location_name)
+
+    def _cmd_location_groups(self):
+        """List all location group names for the currently running game."""
+        if not self.ctx.game:
+            self.output("No game set, cannot determine existing location groups.")
+            return False
+        self.output(f"Location Group Names for {self.ctx.game}")
+        for group_name in AutoWorldRegister.world_types[self.ctx.game].location_name_groups:
+            self.output(group_name)
 
     def _cmd_ready(self):
         """Send ready status to server."""
@@ -184,6 +218,10 @@ class CommonContext:
     server_locations: typing.Set[int]  # all locations the server knows of, missing_location | checked_locations
     locations_info: typing.Dict[int, NetworkItem]
 
+    # data storage
+    stored_data: typing.Dict[str, typing.Any]
+    stored_data_notification_keys: typing.Set[str]
+
     # internals
     # current message box through kvui
     _messagebox: typing.Optional["kvui.MessageBox"] = None
@@ -219,6 +257,9 @@ class CommonContext:
         self.server_locations = set()  # all locations the server knows of, missing_location | checked_locations
         self.locations_info = {}
 
+        self.stored_data = {}
+        self.stored_data_notification_keys = set()
+
         self.input_queue = asyncio.Queue()
         self.input_requests = 0
 
@@ -228,6 +269,7 @@ class CommonContext:
         self.watcher_event = asyncio.Event()
 
         self.jsontotextparser = JSONtoTextParser(self)
+        self.rawjsontotextparser = RawJSONtoTextParser(self)
         self.update_data_package(network_data_package)
 
         # execution
@@ -363,10 +405,13 @@ class CommonContext:
 
     def on_print_json(self, args: dict):
         if self.ui:
-            self.ui.print_json(args["data"])
-        else:
-            text = self.jsontotextparser(args["data"])
-            logger.info(text)
+            # send copy to UI
+            self.ui.print_json(copy.deepcopy(args["data"]))
+
+        logging.getLogger("FileLog").info(self.rawjsontotextparser(copy.deepcopy(args["data"])),
+                                          extra={"NoStream": True})
+        logging.getLogger("StreamLog").info(self.jsontotextparser(copy.deepcopy(args["data"])),
+                                            extra={"NoFile": True})
 
     def on_package(self, cmd: str, args: dict):
         """For custom package handling in subclasses."""
@@ -440,7 +485,7 @@ class CommonContext:
                 else:
                     self.update_game(cached_game)
         if needed_updates:
-            await self.send_msgs([{"cmd": "GetDataPackage", "games": list(needed_updates)}])
+            await self.send_msgs([{"cmd": "GetDataPackage", "games": [game_name]} for game_name in needed_updates])
 
     def update_game(self, game_package: dict):
         for item_name, item_id in game_package["item_name_to_id"].items():
@@ -457,8 +502,24 @@ class CommonContext:
         current_cache = Utils.persistent_load().get("datapackage", {}).get("games", {})
         current_cache.update(data_package["games"])
         Utils.persistent_store("datapackage", "games", current_cache)
+        logger.info(f"Got new ID/Name DataPackage for {', '.join(data_package['games'])}")
         for game, game_data in data_package["games"].items():
             Utils.store_data_package_for_checksum(game, game_data)
+
+    # data storage
+
+    def set_notify(self, *keys: str) -> None:
+        """Subscribe to be notified of changes to selected data storage keys.
+
+        The values can be accessed via the "stored_data" attribute of this context, which is a dictionary mapping the
+        names of the data storage keys to the latest values received from the server.
+        """
+        if new_keys := (set(keys) - self.stored_data_notification_keys):
+            self.stored_data_notification_keys.update(new_keys)
+            async_start(self.send_msgs([{"cmd": "Get",
+                                         "keys": list(new_keys)},
+                                        {"cmd": "SetNotify",
+                                         "keys": list(new_keys)}]))
 
     # DeathLink hooks
 
@@ -582,14 +643,15 @@ async def server_loop(ctx: CommonContext, address: typing.Optional[str] = None) 
         ctx.username = server_url.username
     if server_url.password:
         ctx.password = server_url.password
-    port = server_url.port or 38281
 
     def reconnect_hint() -> str:
         return ", type /connect to reconnect" if ctx.server_address else ""
 
     logger.info(f'Connecting to Archipelago server at {address}')
     try:
-        socket = await websockets.connect(address, port=port, ping_timeout=None, ping_interval=None)
+        port = server_url.port or 38281  # raises ValueError if invalid
+        socket = await websockets.connect(address, port=port, ping_timeout=None, ping_interval=None,
+                                          ssl=get_ssl_context() if address.startswith("wss://") else None)
         if ctx.ui is not None:
             ctx.ui.update_address_bar(server_url.netloc)
         ctx.server = Endpoint(socket)
@@ -604,6 +666,7 @@ async def server_loop(ctx: CommonContext, address: typing.Optional[str] = None) 
     except websockets.InvalidMessage:
         # probably encrypted
         if address.startswith("ws://"):
+            # try wss
             await server_loop(ctx, "ws" + address[1:])
         else:
             ctx.handle_connection_loss(f"Lost connection to the multiworld server due to InvalidMessage"
@@ -690,17 +753,19 @@ async def process_server_cmd(ctx: CommonContext, args: dict):
             await ctx.server_auth(args['password'])
 
     elif cmd == 'DataPackage':
-        logger.info("Got new ID/Name DataPackage")
         ctx.consume_network_data_package(args['data'])
 
     elif cmd == 'ConnectionRefused':
         errors = args["errors"]
         if 'InvalidSlot' in errors:
+            ctx.disconnected_intentionally = True
             ctx.event_invalid_slot()
         elif 'InvalidGame' in errors:
+            ctx.disconnected_intentionally = True
             ctx.event_invalid_game()
         elif 'IncompatibleVersion' in errors:
-            raise Exception('Server reported your client version as incompatible')
+            raise Exception('Server reported your client version as incompatible. '
+                            'This probably means you have to update.')
         elif 'InvalidItemsHandling' in errors:
             raise Exception('The item handling flags requested by the client are not supported')
         # last to check, recoverable problem
@@ -721,6 +786,7 @@ async def process_server_cmd(ctx: CommonContext, args: dict):
         ctx.slot_info = {int(pid): data for pid, data in args["slot_info"].items()}
         ctx.hint_points = args.get("hint_points", 0)
         ctx.consume_players_package(args["players"])
+        ctx.stored_data_notification_keys.add(f"_read_hints_{ctx.team}_{ctx.slot}")
         msgs = []
         if ctx.locations_checked:
             msgs.append({"cmd": "LocationChecks",
@@ -728,6 +794,11 @@ async def process_server_cmd(ctx: CommonContext, args: dict):
         if ctx.locations_scouted:
             msgs.append({"cmd": "LocationScouts",
                          "locations": list(ctx.locations_scouted)})
+        if ctx.stored_data_notification_keys:
+            msgs.append({"cmd": "Get",
+                         "keys": list(ctx.stored_data_notification_keys)})
+            msgs.append({"cmd": "SetNotify",
+                         "keys": list(ctx.stored_data_notification_keys)})
         if msgs:
             await ctx.send_msgs(msgs)
         if ctx.finished_game:
@@ -791,8 +862,17 @@ async def process_server_cmd(ctx: CommonContext, args: dict):
         # we can skip checking "DeathLink" in ctx.tags, as otherwise we wouldn't have been send this
         if "DeathLink" in tags and ctx.last_death_link != args["data"]["time"]:
             ctx.on_deathlink(args["data"])
+
+    elif cmd == "Retrieved":
+        ctx.stored_data.update(args["keys"])
+        if ctx.ui and f"_read_hints_{ctx.team}_{ctx.slot}" in args["keys"]:
+            ctx.ui.update_hints()
+
     elif cmd == "SetReply":
-        if args["key"] == "EnergyLink":
+        ctx.stored_data[args["key"]] = args["value"]
+        if ctx.ui and f"_read_hints_{ctx.team}_{ctx.slot}" == args["key"]:
+            ctx.ui.update_hints()
+        elif args["key"].startswith("EnergyLink"):
             ctx.current_energy_link_value = args["value"]
             if ctx.ui:
                 ctx.ui.set_new_energy_link_value()
@@ -832,11 +912,10 @@ def get_base_parser(description: typing.Optional[str] = None):
     return parser
 
 
-if __name__ == '__main__':
-    # Text Mode to use !hint and such with games that have no text entry
-
+def run_as_textclient():
     class TextContext(CommonContext):
-        tags = {"AP", "TextOnly"}
+        # Text Mode to use !hint and such with games that have no text entry
+        tags = CommonContext.tags | {"TextOnly"}
         game = ""  # empty matches any game since 0.3.2
         items_handling = 0b111  # receive all items for /received
         want_slot_data = False  # Can't use game specific slot_data
@@ -850,11 +929,10 @@ if __name__ == '__main__':
         def on_package(self, cmd: str, args: dict):
             if cmd == "Connected":
                 self.game = self.slot_info[self.slot].game
-        
+
         async def disconnect(self, allow_autoreconnect: bool = False):
             self.game = ""
             await super().disconnect(allow_autoreconnect)
-
 
     async def main(args):
         ctx = TextContext(args.connect, args.password)
@@ -867,7 +945,6 @@ if __name__ == '__main__':
 
         await ctx.exit_event.wait()
         await ctx.shutdown()
-
 
     import colorama
 
@@ -888,3 +965,8 @@ if __name__ == '__main__':
 
     asyncio.run(main(args))
     colorama.deinit()
+
+
+if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)  # force log-level to work around log level resetting to WARNING
+    run_as_textclient()
