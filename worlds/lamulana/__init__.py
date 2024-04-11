@@ -41,6 +41,8 @@ class LaMulanaWorld(World):
 	location_name_to_id |= {location.name: location.code for locations in get_npc_checks(None, None).values() for location in locations}
 	item_name_groups = get_items_by_category()
 
+	precollected_items = set()
+
 	def __init__(self, world : MultiWorld, player: int):
 		super().__init__(world, player)
 		self.worldstate = LaMulanaWorldState(self.multiworld, self.player)
@@ -52,7 +54,7 @@ class LaMulanaWorld(World):
 		for setting_name, item_name in {('HolyGrailShuffle', 'Holy Grail'), ('MiraiShuffle', 'mirai.exe'), ('HermesBootsShuffle', 'Hermes\' Boots'), ('TextTraxShuffle', 'bunemon.exe')}:
 			option = getattr(self.multiworld, setting_name)[self.player]
 			if option == 'start_with':
-				self.multiworld.start_inventory[self.player].value[item_name] = 1
+				self.set_starting_item(item_name)
 			elif option == 'own_world':
 				self.multiworld.local_items[self.player].value.add(item_name)
 			elif option == 'different_world':
@@ -78,7 +80,7 @@ class LaMulanaWorld(World):
 				option = getattr(self.multiworld, 'AlternateMotherAnkh')[self.player]
 				option.value = 1
 
-		self.multiworld.start_inventory[self.player].value[starting_weapon_name] = 1
+		self.set_starting_item(starting_weapon_name)
 
 		starting_location = get_option_value(self.multiworld, self.player, "StartingLocation")
 		if starting_location_names[starting_location] == 'extinction':
@@ -87,13 +89,13 @@ class LaMulanaWorld(World):
 				option = getattr(self.multiworld, 'StartingLocation')[self.player]
 				option.value = lamulana_options['StartingLocation'].option_surface
 			elif self.is_option_enabled("RequireFlareGun") and starting_weapon_names[starting_weapon] != 'Flare Gun':
-				self.multiworld.start_inventory[self.player].value['Flare Gun'] = 1
+				self.set_starting_item('Flare Gun')
 		if starting_location_names[starting_location] == 'twin (front)':
-			self.multiworld.start_inventory[self.player].value['Twin Statue'] = 1
+			self.set_starting_item('Twin Statue')
 		elif starting_location_names[starting_location] == 'goddess':
-			self.multiworld.start_inventory[self.player].value['Plane Model'] = 1
+			self.set_starting_item('Plane Model')
 		elif starting_location_names[starting_location] in {'illusion', 'ruin'}:
-			self.multiworld.start_inventory[self.player].value['Holy Grail'] = 1
+			self.set_starting_item('Holy Grail')
 
 
 	def create_regions(self) -> None:
@@ -144,7 +146,6 @@ class LaMulanaWorld(World):
 			for npc_name, locationdata_list in npc_checks.items():
 				if npc_name in reverse_map:
 					door_name = reverse_map[npc_name]
-					print(npc_name, '-', room_names[door_name])
 					for locationdata in locationdata_list:
 						if not locationdata.is_event:
 							target_transition = ''
@@ -269,6 +270,7 @@ class LaMulanaWorld(World):
 		slot_data : Dict[str, object] = {}
 		for option_name in lamulana_options:
 			slot_data[option_name] = self.get_option_value(option_name)
+		slot_data['precollected_items'] = self.precollected_items
 		slot_data['cursed_chests'] = self.worldstate.cursed_chests
 		if self.worldstate.npc_rando:
 			slot_data['npc_locations'] = self.worldstate.npc_mapping
@@ -279,6 +281,10 @@ class LaMulanaWorld(World):
 		if self.worldstate.door_rando:
 			slot_data['door_data'] = self.worldstate.door_map
 		return slot_data
+
+	def set_starting_item(self, item_name: str):
+		self.multiworld.push_precollected(self.create_item(item_name))
+		self.precollected_items.add(item_name)
 
 	def assign_event_items(self):
 		for location in self.multiworld.get_locations(self.player):

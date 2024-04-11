@@ -309,38 +309,46 @@ def create_regions_and_locations(world: MultiWorld, player: int, worldstate: LaM
 		get_and_connect_doors(world, player, worldstate, s)
 
 	if worldstate.transition_rando:
-		transition_entrances = None
 		success = False
 		simulated_state = worldstate.build_simulated_state()
-		while not success:
-			remove_entrances(world, player, transition_entrances)
+
+		base_exits = set()
+		for region in world.get_regions(player):
+			base_exits.update(set(region.exits))
+
+		total_attempt_count = 100
+		for attempt in range(total_attempt_count):
 			worldstate.randomize_transitions(s)
-			transition_entrances = get_and_connect_transitions(world, player, worldstate, s)
+			get_and_connect_transitions(world, player, worldstate, s)
 
 			if worldstate.door_rando:
 				worldstate.randomize_doors(s)
-				transition_entrances.update(get_and_connect_doors(world, player, worldstate, s))
+				get_and_connect_doors(world, player, worldstate, s)
 
 			success = worldstate.layout_fulfills_accessibility(simulated_state)
+			if success:
+				print(f'Player {player}: entrance randomizer success on attempt {attempt}')
+				break
+			else:
+				remove_entrances(world, player, base_exits)
+		if not success:
+			raise Exception(f'Could not find valid La-Mulana entrance layout in {total_attempt_count} attempts')
+
 	else:
 		if worldstate.door_rando:
 			worldstate.randomize_doors(s)
 			get_and_connect_doors(world, player, worldstate, s)
 		get_and_connect_transitions(world, player, worldstate, s)
 
-def remove_entrances(world: MultiWorld, player: int, to_remove: Set[Entrance]):
-	if not to_remove:
-		return
+
+def remove_entrances(world: MultiWorld, player: int, exits_to_keep: Set[Entrance]):
 	for region in world.get_regions(player):
-		for n in range(len(region.exits) - 1, -1, -1):
-			entrance = region.exits[n]
-			if entrance in to_remove:
-				to_remove.remove(entrance)
-				entrance.connected_region.entrances.remove(entrance)
+		for entrance in reversed(region.exits):
+			if entrance not in exits_to_keep:
 				region.exits.remove(entrance)
 
+
 def get_and_connect_transitions(world: MultiWorld, player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts):
-	entrances: Set[Entrance] = set()
 	transitions = worldstate.get_transitions(s)
 	for transition_name, transition_data in transitions['left'].items():
 		if transition_data.is_oneway:
@@ -354,20 +362,20 @@ def get_and_connect_transitions(world: MultiWorld, player: int, worldstate: LaMu
 						target_name = worldstate.transition_map['Surface R1']
 						target = transitions['left'][target_name]
 					# Since this is Endless L1, do not connect backward
-					entrances.update(connect_transitions(world, player, transition_data, target, False))
+					connect_transitions(world, player, transition_data, target, False)
 				else:
-					entrances.update(connect_transitions(world, player, transition_data, target))
+					connect_transitions(world, player, transition_data, target)
 			else:
 				target_name = transition_data.vanilla_destination
 				target = transitions['right'][target_name]
-				entrances.update(connect_transitions(world, player, transition_data, target))
+				connect_transitions(world, player, transition_data, target)
 		else:
 			if worldstate.transition_rando:
 				target_name = worldstate.transition_map[transition_name]
 			else:
 				target_name = transition_data.vanilla_destination
 			target = transitions['right'][target_name]
-			entrances.update(connect_transitions(world, player, transition_data, target))
+			connect_transitions(world, player, transition_data, target)
 
 	for transition_name, transition_data in transitions['up'].items():
 		if transition_data.is_oneway:
@@ -375,30 +383,26 @@ def get_and_connect_transitions(world: MultiWorld, player: int, worldstate: LaMu
 		else:
 			target_name = worldstate.transition_map[transition_name] if worldstate.transition_rando else transition_data.vanilla_destination
 		target = transitions['down'][target_name]
-		entrances.update(connect_transitions(world, player, transition_data, target))
-
-	return entrances
+		connect_transitions(world, player, transition_data, target)
 
 def connect_transitions(world: MultiWorld, player: int, source: LaMulanaTransition, destination: LaMulanaTransition, both_ways=True):
-	entrances: Set[Entrance] = set()
-
 	# Accounts for Endless L1 leading to the same region
 	if source.region == destination.region:
-		return entrances
+		return
 	if source.in_logic and destination.out_logic:
 		transition_logic = lambda state: source.in_logic(state) and destination.out_logic(state)
 	elif source.in_logic:
 		transition_logic = source.in_logic
 	else:
 		transition_logic = destination.out_logic
-	entrances.add(connect(world, player, source.region, destination.region, transition_logic))
+	
+	exit_name = f'{source.region} -> {source.vanilla_destination}'
+	connect(world, player, source.region, destination.region, transition_logic, exit_name)
 
 	if both_ways:
-		entrances.update(connect_transitions(world, player, destination, source, False))
-	return entrances
+		connect_transitions(world, player, destination, source, False)
 
 def get_and_connect_doors(world: MultiWorld, player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts):
-	entrances: Set[Entrance] = set()
 	doors = worldstate.get_doors()
 	door_logic = worldstate.door_requirement_logic(s)
 	for door_name, door_data in doors.items():
@@ -421,24 +425,22 @@ def get_and_connect_doors(world: MultiWorld, player: int, worldstate: LaMulanaWo
 				elif door_name == 'Illusion Door':
 					connection_logic = lambda state: s.state_key_fairy_access(state, False) and (state.can_reach('Gate of Illusion [Middle]', 'Region', player) or s.state_backside_warp(state))
 
+			exit_name = f'{door_name} -> {target_name}'
+
 			if target_name == 'Endless One-way Exit':
-				entrances.add(connect(world, player, door_data.region, target.region, lambda state: connection_logic(state) and state.has('Holy Grail', player) if callable(connection_logic) else lambda state: state.has('Holy Grail', player)))
+				connect(world, player, door_data.region, target.region, lambda state: connection_logic(state) and state.has('Holy Grail', player) if callable(connection_logic) else lambda state: state.has('Holy Grail', player), exit_name)
 			else:
-				entrances.add(connect(world, player, door_data.region, target.region, connection_logic))
-	return entrances
+				connect(world, player, door_data.region, target.region, connection_logic, exit_name)
 
 
-def connect(world: MultiWorld, player: int, source: str, target: str, logic: Optional[Callable[CollectionState,bool]] = None):
+def connect(world: MultiWorld, player: int, source: str, target: str, logic: Optional[Callable[CollectionState,bool]] = None, exit_name=None):
 	source_region = world.get_region(source, player)
 	target_region = world.get_region(target, player)
-	
-	connection = Entrance(player, '', source_region)
 
-	if logic:
-		connection.access_rule = logic
-	source_region.exits.append(connection)
-	connection.connect(target_region)
-	return connection
+	exit_data = {target: exit_name} if exit_name else [target]
+
+	source_region.add_exits(exit_data, {target: logic} if logic else None)
+
 
 def create_location(player: int, location_data: LocationData, region: Region, additional_logic: Optional[Callable]=None):
 	location = Location(player, location_data.name, location_data.code, region)

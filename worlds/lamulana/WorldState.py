@@ -1,5 +1,5 @@
 from typing import List, Dict, Set, Optional, Callable, Tuple, NamedTuple
-from BaseClasses import MultiWorld, CollectionState, Region, Location, LocationProgressType
+from BaseClasses import MultiWorld, CollectionState, Region, Location, LocationProgressType, Item, ItemClassification
 from .Options import is_option_enabled, get_option_value, starting_location_ids, starting_weapon_names
 from .Locations import get_locations_by_region
 from .LogicShortcuts import LaMulanaLogicShortcuts
@@ -124,8 +124,9 @@ class LaMulanaWorldState:
 							item_count = 1
 					elif item_name.startswith('Ankh Jewel (') and flag_specific_ankh_jewels:
 						item_count = 1
-				if item_count > 0:
-					simulated_state.prog_items[item_name, self.player] = item_count
+				for x in range(item_count):
+					item = Item(item_name, ItemClassification.progression, item_data.code, self.player)
+					simulated_state.collect(item)
 		simulated_state.stale[self.player] = True
 		return simulated_state
 
@@ -199,9 +200,11 @@ class LaMulanaWorldState:
 			for location in sphere:
 				if location.event:
 					item_name = location.item.name if location.item is not None else location.name
-					if '—' in item_name:
-						item_name = item_name[:item_name.find('—')].strip()
-					state.prog_items[item_name, self.player] = 1
+					#Special case for Lamp Recharge, since it's the only event where the location name and item names don't match (since there's multiple lamp recharge spots)
+					if 'Lamp Recharge' in item_name:
+						item_name = 'Lamp Recharge'
+					event_item = Item(item_name, ItemClassification.progression, None, self.player)
+					state.collect(event_item)
 					state.stale[self.player] = True
 
 			if victory(state):
