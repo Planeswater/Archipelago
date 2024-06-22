@@ -1,5 +1,5 @@
 from typing import Dict, List, Set, Optional, TextIO, Union
-from BaseClasses import Item, MultiWorld, Tutorial, Region, Entrance, Item, ItemClassification
+from BaseClasses import MultiWorld, Tutorial, Region, Entrance, Item, ItemClassification
 from Options import Accessibility
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import add_item_rule
@@ -41,7 +41,7 @@ class LaMulanaWorld(World):
 	location_name_to_id |= {location.name: location.code for locations in get_npc_checks(None, None).values() for location in locations}
 	item_name_groups = get_items_by_category()
 
-	precollected_items = set()
+	precollected_items = {}
 
 	def __init__(self, world : MultiWorld, player: int):
 		super().__init__(world, player)
@@ -50,6 +50,8 @@ class LaMulanaWorld(World):
 	def generate_early(self) -> None:
 		#Do stuff that can still modify settings
 		self.multiworld.local_items[self.player].value |= self.item_name_groups['ShopInventory']
+
+		self.precollected_items[self.player] = set()
 
 		for setting_name, item_name in {('HolyGrailShuffle', 'Holy Grail'), ('MiraiShuffle', 'mirai.exe'), ('HermesBootsShuffle', 'Hermes\' Boots'), ('TextTraxShuffle', 'bunemon.exe')}:
 			option = getattr(self.multiworld, setting_name)[self.player]
@@ -102,7 +104,6 @@ class LaMulanaWorld(World):
 		create_regions_and_locations(self.multiworld, self.player, self.worldstate)
 
 	def create_items(self) -> None:
-		success = False
 		self.assign_event_items()
 		shop_items = self.create_shop_items()
 		self.multiworld.itempool += shop_items
@@ -116,7 +117,7 @@ class LaMulanaWorld(World):
 		if option.value == lamulana_options['RandomizeCoinChests'].option_include_escape_chest:
 			#local progression would be a problem for the escape coin chest - if it involves another player and loops back to us, that's fine
 			escape_location = self.multiworld.get_location('Twin Labyrinths Escape Coin Chest', self.player)
-			add_item_rule(escape_location, lambda item: item.player != self.player or item.classification != ItemClassification.progression)
+			add_item_rule(escape_location, lambda item: item.player != self.player or not item.classification in {ItemClassification.progression, ItemClassification.progression_skip_balancing})
 
 	def extend_hint_information(self, hint_data: Dict[int, Dict[int,str]]):
 		hint_info = {}
@@ -270,7 +271,7 @@ class LaMulanaWorld(World):
 		slot_data : Dict[str, object] = {}
 		for option_name in lamulana_options:
 			slot_data[option_name] = self.get_option_value(option_name)
-		slot_data['precollected_items'] = self.precollected_items
+		slot_data['precollected_items'] = self.precollected_items[self.player]
 		slot_data['cursed_chests'] = self.worldstate.cursed_chests
 		if self.worldstate.npc_rando:
 			slot_data['npc_locations'] = self.worldstate.npc_mapping
@@ -284,12 +285,13 @@ class LaMulanaWorld(World):
 
 	def set_starting_item(self, item_name: str):
 		self.multiworld.push_precollected(self.create_item(item_name))
-		self.precollected_items.add(item_name)
+		self.precollected_items[self.player].add(item_name)
 
 	def assign_event_items(self):
 		for location in self.multiworld.get_locations(self.player):
 			if location.address is None:
 				item_name = location.name
+				#Special case for Lamp charges - strip away lamp recharge location name, only the "Lamp Recharge" part stays for event item name
 				if '—' in location.name:
 					item_name = item_name[:item_name.find('—')].strip()
 				item = Item(item_name, ItemClassification.progression, None, self.player)
@@ -353,14 +355,22 @@ class LaMulanaWorld(World):
 					self.place_locked_item(ammo_slot, required_subweapon_ammo)
 					shop_locations.remove(ammo_slot)
 		else:
-			self.place_locked_item('Starting Shop Item 1', '5 Weights')
-			shop_locations.remove('Starting Shop Item 1')
+			starting_shop_slots = ['Starting Shop Item 1', 'Starting Shop Item 2', 'Starting Shop Item 3']
+			weight_slot = self.multiworld.random.choice(starting_shop_slots)
+
+			self.place_locked_item(weight_slot, '5 Weights')
+			starting_shop_slots.remove(weight_slot)
+			shop_locations.remove(weight_slot)
+
 			if required_subweapon_ammo:
-				self.place_locked_item('Starting Shop Item 2', required_subweapon_ammo)
-				shop_locations.remove('Starting Shop Item 2')
+				subweapon_slot = self.multiworld.random.choice(starting_shop_slots)
+				self.place_locked_item(subweapon_slot, required_subweapon_ammo)
+				starting_shop_slots.remove(subweapon_slot)
+				shop_locations.remove(subweapon_slot)
 			if required_subweapon_ammo_2:
-				self.place_locked_item('Starting Shop Item 3', required_subweapon_ammo_2)
-				shop_locations.remove('Starting Shop Item 3')
+				subweapon_slot = self.multiworld.random.choice(starting_shop_slots)
+				self.place_locked_item(subweapon_slot, required_subweapon_ammo_2)
+				shop_locations.remove(subweapon_slot)
 
 		slot_amount = len(shop_locations) - self.get_option_value('ShopDensity')
 
@@ -388,12 +398,15 @@ class LaMulanaWorld(World):
 
 		return item_list
 
-	def get_excluded_items(self) -> Set[str]:
-		#101 base locations (chests + NPC checks) + 24 coin chests + escape chest + 4 trap items + number of randomized items in shops + 1 Hell Temple check
-		coin_chest_option = self.get_option_value('RandomizeCoinChests')
-		location_pool_size = 101 + (24 if coin_chest_option else 0) + (1 if coin_chest_option == 2 else 0) + (4 if self.is_option_enabled('RandomizeTrapItems') else 0) + self.get_option_value('ShopDensity') + (1 if self.is_option_enabled('HellTempleReward') else 0)
+	def get_excluded_items(self, shop_item_amt=None) -> Set[str]:
+		if shop_item_amt is not None:
+			location_pool_size = self.get_unfilled_locations(self.player) - shop_item_amt
+		else:
+			#101 base locations (chests + NPC checks) + 24 coin chests + escape chest + 4 trap items + number of randomized items in shops + 1 Hell Temple check
+			coin_chest_option = self.get_option_value('RandomizeCoinChests')
+			location_pool_size = 101 + (24 if coin_chest_option else 0) + (1 if coin_chest_option == 2 else 0) + (4 if self.is_option_enabled('RandomizeTrapItems') else 0) + self.get_option_value('ShopDensity') + (1 if self.is_option_enabled('HellTempleReward') else 0)
 
-		item_pool_size = 125
+		item_pool_size = 126
 		if self.is_option_enabled('AlternateMotherAnkh'):
 			item_pool_size += 1
 
@@ -433,7 +446,13 @@ class LaMulanaWorld(World):
 				continue
 			if data.category == 'MainWeapon' and self.is_option_enabled('SubweaponOnly'):
 				continue
-			for _ in range(data.count - (self.multiworld.start_inventory[self.player].value[name] if name in self.multiworld.start_inventory[self.player].value else 0)):
+			item_count = data.count
+			if name in self.precollected_items[self.player]:
+				item_count -= 1
+			if name in self.multiworld.start_inventory[self.player].value:
+				item_count -= self.multiworld.start_inventory[self.player].value[name]
+
+			for _ in range(max(item_count, 0)):
 				item = self.create_item(name)
 				item_pool.append(item)
 

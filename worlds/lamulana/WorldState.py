@@ -124,7 +124,7 @@ class LaMulanaWorldState:
 							item_count = 1
 					elif item_name.startswith('Ankh Jewel (') and flag_specific_ankh_jewels:
 						item_count = 1
-				for x in range(item_count):
+				for _ in range(item_count):
 					item = Item(item_name, ItemClassification.progression, item_data.code, self.player)
 					simulated_state.collect(item)
 		simulated_state.stale[self.player] = True
@@ -167,9 +167,7 @@ class LaMulanaWorldState:
 		beatable_fulfilled = False
 
 		def location_relevant(location: Location) -> bool:
-			if location.progress_type != LocationProgressType.EXCLUDED and (accessibility == 'locations' or location.event):
-				return True
-			return False
+			return location.progress_type != LocationProgressType.EXCLUDED and (accessibility == 'locations' or location.is_event or location.progress_type == LocationProgressType.PRIORITY)
 
 		def all_done() -> bool:
 			if not beatable_fulfilled:
@@ -198,7 +196,7 @@ class LaMulanaWorldState:
 				return False
 
 			for location in sphere:
-				if location.event:
+				if location.is_event:
 					item_name = location.item.name if location.item is not None else location.name
 					#Special case for Lamp Recharge, since it's the only event where the location name and item names don't match (since there's multiple lamp recharge spots)
 					if 'Lamp Recharge' in item_name:

@@ -327,12 +327,12 @@ def create_regions_and_locations(world: MultiWorld, player: int, worldstate: LaM
 
 			success = worldstate.layout_fulfills_accessibility(simulated_state)
 			if success:
-				print(f'Player {player}: entrance randomizer success on attempt {attempt}')
+				print(f'Player {player}: La-Mulana entrance randomizer success on attempt {attempt}')
 				break
 			else:
 				remove_entrances(world, player, base_exits)
 		if not success:
-			raise Exception(f'Could not find valid La-Mulana entrance layout in {total_attempt_count} attempts')
+			raise Exception(f'Could not find valid La-Mulana entrance layout in {total_attempt_count} attempts for player {player}')
 
 	else:
 		if worldstate.door_rando:
@@ -448,9 +448,6 @@ def create_location(player: int, location_data: LocationData, region: Region, ad
 		location.access_rule = lambda state: additional_logic(state) and location_data.logic(state)
 	else:
 		location.access_rule = location_data.logic
-	if location_data.is_event:
-		location.event = True
-		location.locked = True
 	return location
 
 def create_region(world: MultiWorld, player: int, region_name: str, locations_per_region: Dict[str, List[LocationData]], npcs_per_region: Dict[str,LaMulanaNPCDoor], cursed_chests: Optional[Set[str]] = {}):

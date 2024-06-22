@@ -304,10 +304,26 @@ class LaMulanaCombatLogic:
 		return self.s.attack_pistol(state) or self.s.attack_ring_chakram(state) or (self.s.attack_chakram(state) and self.s.state_lamp(state)) or (self.s.attack_main(state) and self.kulullu(state))
 
 	def right_side_children(self, state: CollectionState) -> bool:
+		health = self.s.get_health_count(state)
 		if self.flag_hard_logic:
-			pass
+			if s.attack_pistol(state):
+				return True
+			if s.attack_main(state) and s.state_shield(state):
+				return True
+			if s.attack_chakram(state) and (s.state_shield(state) or s.state_lamp(state)):
+				return True
+			if health >= 4 and (s.state_shield(state) or s.state_lamp(state)):
+				if s.attack_ring_shuriken(state):
+					return True
+				if s.attack_earth_spear(state) and s.attack_ring_bomb(state):
+					return True
+				if s.attack_caltrops(state) and s.attack_bomb(state):
+					return True
+			if health >= 2 or s.state_lamp(state):
+				if s.attack_rolling_shuriken(state) and (s.attack_earth_spear(state) or s.attack_bomb(state) or s.attack_caltrops(state)):
+					return True
+			return False
 		else:
-			health = self.s.get_health_count(state)
 			if health >= 8:
 				if self.s.state_shield(state) and (self.s.attack_main(state) or self.s.attack_chakram(state) or self.s.attack_pistol(state)):
 					return True
@@ -324,7 +340,17 @@ class LaMulanaCombatLogic:
 
 	def angel_shield_children(self, state: CollectionState) -> bool:
 		if self.flag_hard_logic:
-			pass
+			if s.attack_main(state):
+				return True
+			if s.attack_pistol(state) and (s.attack_bomb(state) or s.attack_flare_gun(state) or s.attack_caltrops(state)):
+				return True
+			if s.attack_chakram(state) and s.get_health_count(state) >= 4:
+				return True
+			if s.attack_ring_flare_gun(state) and (s.attack_shuriken(state) or s.attack_rolling_shuriken(state) or s.attack_chakram(state) or s.attack_caltrops(state)):
+				return True
+			if s.attack_rolling_shuriken(state) and s.attack_caltrops(state):
+				return True
+			return False
 		else:
 			health = self.s.get_health_count(state)
 			if self.flag_subweapon_only:
@@ -555,11 +581,9 @@ class LaMulanaCombatLogic:
 			return self.s.attack_main(state)
 
 	def hell_temple_bosses(self, state: CollectionState) -> bool:
-		if self.flag_hard_logic:
-			pass
-		else:
-			if self.s.get_health_count(state) < 8 or not self.s.state_lamp(state):
-				return False
-			if self.flag_subweapon_only:
-				return self.s.attack_ring_chakram(state) or (self.s.attack_pistol(state) and self.s.attack_bomb(state) and self.s.attack_earth_spear(state))
-			return state.has('Flail Whip', self.player)
+		#Same hard logic
+		if self.s.get_health_count(state) < 8 or not self.s.state_lamp(state):
+			return False
+		if self.flag_subweapon_only:
+			return self.s.attack_ring_chakram(state) or (self.s.attack_pistol(state) and self.s.attack_bomb(state) and self.s.attack_earth_spear(state))
+		return state.has('Flail Whip', self.player)

@@ -37,7 +37,7 @@ class LaMulanaLogicShortcuts:
 
 
 	#Could add +1 if revive combo was on, but that would turn move.exe and randc.exe into progression
-	def get_health_count(self, state: CollectionState) -> bool:
+	def get_health_count(self, state: CollectionState) -> int:
 		return state.count("Sacred Orb", self.player)
 
 	def attack_whip(self, state: CollectionState) -> bool:
