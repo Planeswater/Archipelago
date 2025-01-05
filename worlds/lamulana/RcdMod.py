@@ -87,6 +87,8 @@ class RcdMod(FileMod):
         self.__add_diary_chest_timer()
         self.__remove_xelpud_door()
 
+        self.__rewrite_mulbruk_doors()
+
         self.__rewrite_slushfund_conversation_conditions()
         self.__rewrite_four_guardian_shop_conditions(dat_mod)
         self.__rewrite_cog_chest()
@@ -181,7 +183,7 @@ class RcdMod(FileMod):
 
     def __remove_xelpud_door(self) -> None:
         screen = self.file_contents.zones[1].rooms[2].screens[1]
-        self.__remove_object(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"], TEST_OPERATIONS["eq"], 2)
+        self.__remove_object_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"], TEST_OPERATIONS["eq"], 2)
 
     def __rewrite_diary_chest(self) -> None:
         objects = self.file_contents.zones[9].rooms[2].screens[1].objects_with_position
@@ -201,6 +203,12 @@ class RcdMod(FileMod):
         write_ops = [Operation.create(GLOBAL_FLAGS["shrine_diary_chest"], WRITE_OPERATIONS["assign"], 2)]
         flag_timer.add_ops(test_ops, write_ops)
         flag_timer.add_to_screen(self, screen)
+
+    def __rewrite_mulbruk_doors(self) -> None:
+        screen = self.file_contents.zones[3].rooms[3].screens[0]
+        self.__remove_object_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 926)
+        self.__remove_object_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 1014)
+        self.__remove_object_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], TEST_OPERATIONS["lteq"], 55)
 
     def __rewrite_four_guardian_shop_conditions(self, dat_mod):
         msx2_replacement_flag = dat_mod.find_shop_flag("nebur_guardian", 0)
@@ -275,6 +283,11 @@ class RcdMod(FileMod):
         # Remove Shrine Chest Check from Xelpud Conversations
         xelpud_conversation_objects = self.file_contents.zones[0].rooms[6].screens[0].objects_with_position
         self.__remove_operation("test", xelpud_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"])
+
+        # Remove Unknown Flag from Mulbruk Conversations
+        mulbruk_conversation_objects = self.file_contents.zones[3].rooms[3].screens[0].objects_with_position
+        self.__remove_operation("test", mulbruk_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["mulbruk_conversation_unknown"])
+        self.__update_operation("test", mulbruk_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], GLOBAL_FLAGS["score"], old_op_value=56, old_operation=TEST_OPERATIONS["gteq"], new_op_value=0)
 
     def __create_grail_autoscans(self) -> None:
         for zone in self.file_contents.zones:
@@ -440,6 +453,9 @@ class RcdMod(FileMod):
     def __find_object_index_by_operation(self, op_type, objects, object_ids, flag, operation=None, op_value=None):
         return next(i for i, o in enumerate(objects) if o.id in object_ids and len([op for op in getattr(o, self.__op_type(op_type)) if self.__op_matches(op, flag, operation, op_value)]) > 0)
 
+    def __find_object_index_by_parameter(self, objects, object_ids, param_index, param_value):
+        return next(i for i, o in enumerate(objects) if o.id in object_ids and o.parameters[param_index] == param_value)
+
     def __find_operation_index(self, ops, flag, operation=None, op_value=None):
         return next(i for i, op in enumerate(ops) if self.__op_matches(op, flag, operation, op_value))
 
@@ -450,8 +466,15 @@ class RcdMod(FileMod):
 
     # Write Methods
 
-    def __remove_object(self, screen, op_type, objects, object_ids, flag, operation, op_value):
+    def __remove_object_by_operation(self, screen, op_type, objects, object_ids, flag, operation, op_value):
         object_index = self.__find_object_index_by_operation(op_type, objects, object_ids, flag, operation, op_value)
+        self.__remove_object(screen, objects, object_index)
+
+    def __remove_object_by_parameter(self, screen, objects, object_ids, param_index, param_value):
+        object_index = self.__find_object_index_by_parameter(objects, object_ids, param_index, param_value)
+        self.__remove_object(screen, objects, object_index)
+
+    def __remove_object(self, screen, objects, object_index):
         obj = objects[object_index]
 
         screen.objects_length -= 1
