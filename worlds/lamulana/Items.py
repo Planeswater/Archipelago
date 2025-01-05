@@ -1,4 +1,5 @@
-from typing import Dict, Set, Tuple, NamedTuple, Optional
+from typing import NamedTuple
+
 
 class ItemData(NamedTuple):
 	category: str
@@ -6,18 +7,19 @@ class ItemData(NamedTuple):
 	progression: bool = False
 	useful: bool = False
 	trap: bool = False
-	count: int = 1
+	number: int = 1
 	game_code: int = 0
-	cost: Optional[int] = None
+	cost: int | None = None
 	quantity: int = 1
-	obtain_flag: Optional[int] = None
-	obtain_value: Optional[int] = None
+	obtain_flag: int | None = None
+	obtain_value: int | None = None
 
-item_table: Dict[str, ItemData] = {
-	'Leather Whip':                     ItemData('MainWeapon', 2359000, progression=True, game_code=0, obtain_flag=0x863, obtain_value=1, count=0), #Cannot be sent, only as a starting item
+
+item_table: dict[str, ItemData] = {
+	'Leather Whip':                     ItemData('MainWeapon', 2359000, progression=True, game_code=0, obtain_flag=0x863, obtain_value=1, number=0),  # Cannot be sent, only as a starting item
 	'Chain Whip':                       ItemData('MainWeapon', 2359001, progression=True, game_code=1, obtain_flag=0x7d, obtain_value=1),
 	'Flail Whip':                       ItemData('MainWeapon', 2359002, progression=True, game_code=2, obtain_flag=0x7e, obtain_value=1),
-	#gonna reserve 2359003 in case we ever implement progressive whips
+	# gonna reserve 2359003 in case we ever implement progressive whips
 	'Knife':                            ItemData('MainWeapon', 2359004, progression=True, game_code=3, obtain_flag=0x7f, obtain_value=1),
 	'Key Sword':                        ItemData('MainWeapon', 2359005, progression=True, game_code=4, obtain_flag=0x80, obtain_value=1),
 	'Axe':                              ItemData('MainWeapon', 2359006, progression=True, game_code=5, obtain_flag=0x81, obtain_value=1),
@@ -34,16 +36,16 @@ item_table: Dict[str, ItemData] = {
 	'Fake Silver Shield':               ItemData('Shield', 2359017, game_code=75, obtain_flag=0x82e, obtain_value=2),
 	'Silver Shield':                    ItemData('Shield', 2359018, progression=True, game_code=17, obtain_flag=0x8c, obtain_value=1),
 	'Angel Shield':                     ItemData('Shield', 2359019, progression=True, game_code=18, obtain_flag=0x8d, obtain_value=2),
-	'Ankh Jewel':                       ItemData('Ankh Jewel', 2359020, progression=True, count=0, game_code=19, obtain_flag=0x852, obtain_value=1), #Adjust ankh jewel amount based on settings
-	'Ankh Jewel (Amphisbaena)':         ItemData('Ankh Jewel', 2359021, progression=True, count=0, game_code=19, obtain_flag=0x8e, obtain_value=1),
-	'Ankh Jewel (Sakit)':               ItemData('Ankh Jewel', 2359022, progression=True, count=0, game_code=19, obtain_flag=0x8f, obtain_value=1),
-	'Ankh Jewel (Ellmac)':              ItemData('Ankh Jewel', 2359023, progression=True, count=0, game_code=19, obtain_flag=0x90, obtain_value=1),
-	'Ankh Jewel (Bahamut)':             ItemData('Ankh Jewel', 2359024, progression=True, count=0, game_code=19, obtain_flag=0x91, obtain_value=1),
-	'Ankh Jewel (Viy)':                 ItemData('Ankh Jewel', 2359025, progression=True, count=0, game_code=19, obtain_flag=0x92, obtain_value=1),
-	'Ankh Jewel (Palenque)':            ItemData('Ankh Jewel', 2359026, progression=True, count=0, game_code=19, obtain_flag=0x93, obtain_value=1),
-	'Ankh Jewel (Baphomet)':            ItemData('Ankh Jewel', 2359027, progression=True, count=0, game_code=19, obtain_flag=0x94, obtain_value=1),
-	'Ankh Jewel (Tiamat)':              ItemData('Ankh Jewel', 2359028, progression=True, count=0, game_code=19, obtain_flag=0x95, obtain_value=1),
-	'Ankh Jewel (Mother)':              ItemData('Ankh Jewel', 2359029, progression=True, count=0, game_code=19, obtain_flag=0x853, obtain_value=1),
+	'Ankh Jewel':                       ItemData('Ankh Jewels', 2359020, progression=True, number=0, game_code=19, obtain_flag=0x852, obtain_value=1),  # Adjust ankh jewel amount based on settings
+	'Ankh Jewel (Amphisbaena)':         ItemData('Ankh Jewels', 2359021, progression=True, number=0, game_code=19, obtain_flag=0x8e, obtain_value=1),
+	'Ankh Jewel (Sakit)':               ItemData('Ankh Jewels', 2359022, progression=True, number=0, game_code=19, obtain_flag=0x8f, obtain_value=1),
+	'Ankh Jewel (Ellmac)':              ItemData('Ankh Jewels', 2359023, progression=True, number=0, game_code=19, obtain_flag=0x90, obtain_value=1),
+	'Ankh Jewel (Bahamut)':             ItemData('Ankh Jewels', 2359024, progression=True, number=0, game_code=19, obtain_flag=0x91, obtain_value=1),
+	'Ankh Jewel (Viy)':                 ItemData('Ankh Jewels', 2359025, progression=True, number=0, game_code=19, obtain_flag=0x92, obtain_value=1),
+	'Ankh Jewel (Palenque)':            ItemData('Ankh Jewels', 2359026, progression=True, number=0, game_code=19, obtain_flag=0x93, obtain_value=1),
+	'Ankh Jewel (Baphomet)':            ItemData('Ankh Jewels', 2359027, progression=True, number=0, game_code=19, obtain_flag=0x94, obtain_value=1),
+	'Ankh Jewel (Tiamat)':              ItemData('Ankh Jewels', 2359028, progression=True, number=0, game_code=19, obtain_flag=0x95, obtain_value=1),
+	'Ankh Jewel (Mother)':              ItemData('Ankh Jewels', 2359029, progression=True, number=0, game_code=19, obtain_flag=0x853, obtain_value=1),
 	'Hand Scanner':                     ItemData('Usable', 2359030, progression=True, game_code=20, obtain_flag=0x96, obtain_value=2),
 	'Djed Pillar':                      ItemData('Usable', 2359031, progression=True, game_code=21, obtain_flag=0x97, obtain_value=2),
 	'Mini Doll':                        ItemData('Usable', 2359032, progression=True, game_code=22, obtain_flag=0x98, obtain_value=2),
@@ -54,10 +56,10 @@ item_table: Dict[str, ItemData] = {
 	'Dragon Bone':                      ItemData('Usable', 2359037, progression=True, game_code=27, obtain_flag=0x9d, obtain_value=2),
 	'Crystal Skull':                    ItemData('Usable', 2359038, progression=True, game_code=28, obtain_flag=0x9e, obtain_value=2),
 	'Vessel':                           ItemData('Usable', 2359039, progression=True, game_code=29, obtain_flag=0x9f, obtain_value=2),
-	'Medicine of the Mind':             ItemData('Usable', 2359040, progression=True, count=0, game_code=77, obtain_flag=0x85c, obtain_value=1), #Optionally swap counts with Vessel if a QoL option to skip the medicine process is added
+	'Medicine of the Mind':             ItemData('Usable', 2359040, progression=True, number=0, game_code=77, obtain_flag=0x85c, obtain_value=1),  # Optionally swap counts with Vessel if a QoL option to skip the medicine process is added
 	'Pepper':                           ItemData('Usable', 2359041, progression=True, game_code=30, obtain_flag=0x228, obtain_value=1),
 	'Woman Statue':                     ItemData('Usable', 2359042, progression=True, game_code=31, obtain_flag=0xa1, obtain_value=2),
-	'Maternity Statue':                 ItemData('Usable', 2359043, progression=True, count=0, game_code=81, obtain_flag=0x10b, obtain_value=2), #Optionally swap counts with woman statue if a QoL option is added
+	'Maternity Statue':                 ItemData('Usable', 2359043, progression=True, number=0, game_code=81, obtain_flag=0x10b, obtain_value=2),  # Optionally swap counts with woman statue if a QoL option is added
 	'Key of Eternity':                  ItemData('Usable', 2359044, progression=True, game_code=32, obtain_flag=0xa2, obtain_value=2),
 	'Serpent Staff':                    ItemData('Usable', 2359045, progression=True, game_code=33, obtain_flag=0xa3, obtain_value=2),
 	'Talisman':                         ItemData('Usable', 2359046, progression=True, game_code=34, obtain_flag=0xa4, obtain_value=2),
@@ -116,7 +118,7 @@ item_table: Dict[str, ItemData] = {
 	'bunemon.exe':                      ItemData('Software', 2359090, useful=True, game_code=89, obtain_flag=0xe6, obtain_value=2),
 	'bunplus.com':                      ItemData('Software', 2359091, game_code=90, obtain_flag=0xe7, obtain_value=1),
 	'torude.exe':                       ItemData('Software', 2359092, progression=True, game_code=91, obtain_flag=0xe8, obtain_value=2),
-	'guild.exe':                        ItemData('Software', 2359093, progression=True, game_code=92, obtain_flag=0xe9, obtain_value=2), #progression only if Hell Temple on
+	'guild.exe':                        ItemData('Software', 2359093, progression=True, game_code=92, obtain_flag=0xe9, obtain_value=2),  # progression only if Hell Temple on
 	'mantra.exe':                       ItemData('Software', 2359094, progression=True, game_code=93, obtain_flag=0xea, obtain_value=2),
 	'emusic.exe':                       ItemData('Software', 2359095, game_code=94, obtain_flag=0xeb, obtain_value=1),
 	'beolamu.exe':                      ItemData('Software', 2359096, game_code=95, obtain_flag=0xec, obtain_value=1),
@@ -124,9 +126,9 @@ item_table: Dict[str, ItemData] = {
 	'randc.exe':                        ItemData('Software', 2359098, useful=True, game_code=97, obtain_flag=0xee, obtain_value=2),
 	'capstar.exe':                      ItemData('Software', 2359099, game_code=98, obtain_flag=0xef, obtain_value=2),
 	'move.exe':                         ItemData('Software', 2359100, useful=True, game_code=99, obtain_flag=0xf0, obtain_value=2),
-	'mekuri.exe':                       ItemData('Software', 2359101, progression=True, game_code=100, obtain_flag=0xf1, obtain_value=2), #progression if key fairy combo
+	'mekuri.exe':                       ItemData('Software', 2359101, progression=True, game_code=100, obtain_flag=0xf1, obtain_value=2),  # progression if key fairy combo
 	'bounce.exe':                       ItemData('Software', 2359102, game_code=101, obtain_flag=0xf2, obtain_value=2),
-	'miracle.exe':                      ItemData('Software', 2359103, progression=True, game_code=102, obtain_flag=0xf3, obtain_value=2), #progression if key fairy combo or NPC rando
+	'miracle.exe':                      ItemData('Software', 2359103, progression=True, game_code=102, obtain_flag=0xf3, obtain_value=2),  # progression if key fairy combo or NPC rando
 	'mirai.exe':                        ItemData('Software', 2359104, progression=True, game_code=103, obtain_flag=0xf4, obtain_value=2),
 	'lamulana.exe':                     ItemData('Software', 2359105, useful=True, game_code=104, obtain_flag=0xf5, obtain_value=2),
 	'Map (Surface)':                    ItemData('Map', 2359106, game_code=70, obtain_flag=0xd1, obtain_value=2),
@@ -146,31 +148,33 @@ item_table: Dict[str, ItemData] = {
 	'Map (Tower of Ruin)':              ItemData('Map', 2359120, game_code=70, obtain_flag=0xdf, obtain_value=2),
 	'Map (Chamber of Birth)':           ItemData('Map', 2359121, game_code=70, obtain_flag=0xe0, obtain_value=2),
 	'Map (Dimensional Corridor)':       ItemData('Map', 2359122, game_code=70, obtain_flag=0xe1, obtain_value=2),
-	'Shuriken Ammo':                    ItemData('ShopInventory', 2359123, count=0, progression=True, game_code=107, quantity=10, cost=10),
-	'Rolling Shuriken Ammo':            ItemData('ShopInventory', 2359124, count=0, progression=True, game_code=108, quantity=10, cost=10),
-	'Earth Spear Ammo':                 ItemData('ShopInventory', 2359125, count=0, progression=True, game_code=109, quantity=10, cost=20),
-	'Flare Gun Ammo':                   ItemData('ShopInventory', 2359126, count=0, progression=True, game_code=110, quantity=10, cost=40),
-	'Bomb Ammo':                        ItemData('ShopInventory', 2359127, count=0, progression=True, game_code=111, quantity=10, cost=80),
-	'Chakram Ammo':                     ItemData('ShopInventory', 2359128, count=0, progression=True, game_code=112, quantity=2, cost=55),
-	'Caltrops Ammo':                    ItemData('ShopInventory', 2359129, count=0, progression=True, game_code=113, quantity=10, cost=30),
-	'Pistol Ammo':                      ItemData('ShopInventory', 2359130, count=0, progression=True, game_code=114, quantity=1, cost=350),
-	'5 Weights':                        ItemData('ShopInventory', 2359131, count=0, game_code=105, quantity=5, cost=10),
-	'200 coins':                        ItemData('Resource', 2359132, count=0, game_code=-10, quantity=200),
-	'100 coins':                        ItemData('Resource', 2359133, count=0, game_code=-10, quantity=100),
-	'50 coins':                         ItemData('Resource', 2359134, count=0, game_code=-10, quantity=50),
-	'30 coins':                         ItemData('Resource', 2359135, count=0, game_code=-10, quantity=30),
-	'10 coins':                         ItemData('Resource', 2359136, count=0, game_code=-10, quantity=10),
-	'1 Weight':                         ItemData('Resource', 2359137, count=0, game_code=-9, quantity=1),
-	'Holy Grail (Full)':                ItemData('Inventory', 2359138, progression=False, game_code=83, count=0), # Placeholder for Sending to Other Players
-	#Gap in IDs for other possible items in pool before trap items
-	'Bat Trap':                         ItemData('Trap', 2359160, trap=True, count=0),
-	'Explosive Trap':                   ItemData('Trap', 2359161, trap=True, count=0),
+	'Shuriken Ammo':                    ItemData('ShopInventory', 2359123, number=0, progression=True, game_code=107, quantity=10, cost=10),
+	'Rolling Shuriken Ammo':            ItemData('ShopInventory', 2359124, number=0, progression=True, game_code=108, quantity=10, cost=10),
+	'Earth Spear Ammo':                 ItemData('ShopInventory', 2359125, number=0, progression=True, game_code=109, quantity=10, cost=20),
+	'Flare Gun Ammo':                   ItemData('ShopInventory', 2359126, number=0, progression=True, game_code=110, quantity=10, cost=40),
+	'Bomb Ammo':                        ItemData('ShopInventory', 2359127, number=0, progression=True, game_code=111, quantity=10, cost=80),
+	'Chakram Ammo':                     ItemData('ShopInventory', 2359128, number=0, progression=True, game_code=112, quantity=2, cost=55),
+	'Caltrops Ammo':                    ItemData('ShopInventory', 2359129, number=0, progression=True, game_code=113, quantity=10, cost=30),
+	'Pistol Ammo':                      ItemData('ShopInventory', 2359130, number=0, progression=True, game_code=114, quantity=1, cost=350),
+	'5 Weights':                        ItemData('ShopInventory', 2359131, number=0, game_code=105, quantity=5, cost=10),
+	'200 coins':                        ItemData('Resource', 2359132, number=0, game_code=-10, quantity=200),
+	'100 coins':                        ItemData('Resource', 2359133, number=0, game_code=-10, quantity=100),
+	'50 coins':                         ItemData('Resource', 2359134, number=0, game_code=-10, quantity=50),
+	'30 coins':                         ItemData('Resource', 2359135, number=0, game_code=-10, quantity=30),
+	'10 coins':                         ItemData('Resource', 2359136, number=0, game_code=-10, quantity=10),
+	'1 Weight':                         ItemData('Resource', 2359137, number=0, game_code=-9, quantity=1),
+	'Holy Grail (Full)':                ItemData('Inventory', 2359138, progression=False, game_code=83, number=0),  # Placeholder for Sending to Other Players
+	# Gap in IDs for other possible items in pool before trap items
+	'Bat Trap':                         ItemData('Trap', 2359160, trap=True, number=0),
+	'Explosive Trap':                   ItemData('Trap', 2359161, trap=True, number=0),
 }
 
+
 def get_items_by_category():
-	categories: Dict[str, Set[str]] = {}
+	categories: dict[str, set[str]] = {}
 	for name, data in item_table.items():
 		categories.setdefault(data.category, set()).add(name)
 	return categories
+
 
 item_exclusion_order = ['Map (Surface)', 'Map (Gate of Guidance)', 'Map (Mausoleum of the Giants)', 'Map (Temple of the Sun)', 'Map (Spring in the Sky)', 'Map (Inferno Cavern)', 'Map (Chamber of Extinction)', 'Map (Twin Labyrinths)', 'Map (Endless Corridor)', 'Map (Gate of Illusion)', 'Map (Graveyard of the Giants)', 'Map (Temple of Moonlight)', 'Map (Tower of the Goddess)', 'Map (Tower of Ruin)', 'Map (Chamber of Birth)', 'Map (Dimensional Corridor)', 'beolamu.exe', 'emusic.exe', 'bunplus.com', 'xmailer.exe', 'Waterproof Case', 'Heatproof Case', 'bounce.exe', 'capstar.exe', 'Fake Silver Shield', 'Shell Horn']

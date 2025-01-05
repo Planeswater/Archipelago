@@ -1,20 +1,22 @@
-from typing import TYPE_CHECKING, List, Set, Dict, Tuple, Optional, Callable, NamedTuple
-from BaseClasses import MultiWorld, Location, CollectionState
+from typing import TYPE_CHECKING, Callable, NamedTuple
+from BaseClasses import CollectionState
 from .Options import StartingLocation
 from .Locations import LocationData
 from .LogicShortcuts import LaMulanaLogicShortcuts
-from .WorldState import LaMulanaWorldState
 
 if TYPE_CHECKING:
 	from . import LaMulanaWorld
 
+
 class LaMulanaNPCDoor(NamedTuple):
-	checks: List[LocationData] = []
-	logic: Optional[Callable[CollectionState,bool]] = None
+	checks: list[LocationData] = []
+	logic: Callable[[CollectionState], bool] | None = None
 
 
-def get_npc_checks(world: Optional['LaMulanaWorld'], player: Optional[int]) -> Dict[str,List[LocationData]]:
-	s = LaMulanaLogicShortcuts(world, player)
+def get_npc_checks(world: "LaMulanaWorld | None") -> dict[str, list[LocationData]]:
+	if world:
+		player = world.player
+		s = LaMulanaLogicShortcuts(world)
 	include_dracuet = not world or world.options.RandomizeDracuetsShop
 	return {
 		# 'Starting Shop': [
@@ -29,9 +31,9 @@ def get_npc_checks(world: Optional['LaMulanaWorld'], player: Optional[int]) -> D
 		],
 		'Nebur': [
 			LocationData('Nebur Shop Item 1', 2359205, is_shop=True, file_type='dat', cards=[34], slot=0, item_id=105, obtain_flag=0x808, obtain_value=2),
-			LocationData('Nebur Shop Item 2', 2359206, is_shop=True, file_type='dat', cards=[34,490], slot=1, item_id=85, obtain_flag=0xe2, obtain_value=2),
-			LocationData('Nebur Shop Item 3', 2359207, is_shop=True, file_type='dat', cards=[34,490], slot=2, item_id=87, obtain_flag=0xe4, obtain_value=2),
-			#Must be an item, so doesn't get marked as shop
+			LocationData('Nebur Shop Item 2', 2359206, is_shop=True, file_type='dat', cards=[34, 490], slot=1, item_id=85, obtain_flag=0xe2, obtain_value=2),
+			LocationData('Nebur Shop Item 3', 2359207, is_shop=True, file_type='dat', cards=[34, 490], slot=2, item_id=87, obtain_flag=0xe4, obtain_value=2),
+			# Must be an item, so doesn't get marked as shop
 			LocationData('Nebur Shop Item - 4 Guardians', 2359208, lambda state: s.guardian_count(state) >= 4, file_type='dat', cards=[490], slot=0, item_id=76, obtain_flag=0x2e6, obtain_value=2)
 		],
 		'Sidro': [
@@ -58,7 +60,7 @@ def get_npc_checks(world: Optional['LaMulanaWorld'], player: Optional[int]) -> D
 			LocationData('Greedy Charlie Shop Item 3', 2359221, is_shop=True, file_type='dat', cards=[74], slot=2, item_id=105, obtain_flag=0x80f, obtain_value=2)
 		],
 		'Mulbruk': [
-			LocationData('Mulbruk Book of the Dead Gift', 2359222, lambda state: state.can_reach('Temple of Moonlight [Southeast]', 'Region', player), file_type='dat', cards=[397], item_id=54, obtain_flag=0x32a, obtain_value=2),
+			LocationData('Mulbruk Book of the Dead Gift', 2359222, lambda state: state.can_reach_region('Temple of Moonlight [Southeast]', player), file_type='dat', cards=[397], item_id=54, obtain_flag=0x32a, obtain_value=2),
 			LocationData('NPC: Mulbruk', None, lambda state: True, True),
 		],
 		'Shalom III': [
@@ -182,8 +184,10 @@ def get_npc_checks(world: Optional['LaMulanaWorld'], player: Optional[int]) -> D
 	}
 
 
-def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts) -> Dict[str,List[LaMulanaNPCDoor]]:
-	npc_checks = get_npc_checks(world, player)
+def get_npc_entrances(world: 'LaMulanaWorld', s: LaMulanaLogicShortcuts) -> dict[str, list[LaMulanaNPCDoor]]:
+	player = world.player
+	worldstate = world.worldstate
+	npc_checks = get_npc_checks(world)
 	if worldstate.npc_rando and worldstate.npc_mapping:
 		get_entrance_checks = lambda door: npc_checks[worldstate.npc_mapping[door]] if door in worldstate.npc_mapping and worldstate.npc_mapping[door] in npc_checks else []
 	else:
@@ -193,7 +197,7 @@ def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaW
 
 	npc_doors = {
 		'Menu': [
-			#Starting shop exists only in non-surface starts, and isn't affected by NPC rando
+			# Starting shop exists only in non-surface starts, and isn't affected by NPC rando
 			LaMulanaNPCDoor(npc_checks['Starting Shop'])
 		] if not is_surface_start else [],
 		'Surface [Main]': [
@@ -217,7 +221,7 @@ def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaW
 			LaMulanaNPCDoor(get_entrance_checks('Mulbruk'), lambda state: s.guardian_count(state) >= 1 and state.has(worldstate.get_seal_name('Mulbruk\'s Seal'), player)),
 			LaMulanaNPCDoor(get_entrance_checks('Shalom III'), lambda state: s.attack_shuriken(state) or s.attack_bomb(state) or s.glitch_catpause(state) or (state.has('Feather', player) and (s.attack_forward(state) or s.attack_chakram(state)))),
 			LaMulanaNPCDoor(get_entrance_checks('Usas VI')),
-			LaMulanaNPCDoor(get_entrance_checks('Kingvalley I'), lambda state: state.has_all({'Feather', worldstate.get_seal_name('Sun Discount Shop')}, player)),
+			LaMulanaNPCDoor(get_entrance_checks('Kingvalley I'), lambda state: state.has_all(('Feather', worldstate.get_seal_name('Sun Discount Shop')), player)),
 		],
 		'Temple of the Sun [Sphinx]': [
 			LaMulanaNPCDoor(get_entrance_checks('Priest Madomo')),
@@ -227,8 +231,8 @@ def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaW
 			LaMulanaNPCDoor(get_entrance_checks('Philosopher Giltoriyo')),
 		],
 		'Spring in the Sky [Upper]': [
-			LaMulanaNPCDoor(get_entrance_checks('Mr. Fishman (Original)'), lambda state: state.has_all({'Helmet', worldstate.get_seal_name('Mr. Fishman\'s Shop')}, player)),
-			LaMulanaNPCDoor(get_entrance_checks('Mr. Fishman (Alt)'), lambda state: state.has_all({'Helmet', worldstate.get_seal_name('Mr. Fishman\'s Shop')}, player) and s.state_key_fairy_access(state, False)),
+			LaMulanaNPCDoor(get_entrance_checks('Mr. Fishman (Original)'), lambda state: state.has_all(('Helmet', worldstate.get_seal_name('Mr. Fishman\'s Shop')), player)),
+			LaMulanaNPCDoor(get_entrance_checks('Mr. Fishman (Alt)'), lambda state: state.has_all(('Helmet', worldstate.get_seal_name('Mr. Fishman\'s Shop')), player) and s.state_key_fairy_access(state, False)),
 		],
 		'Inferno Cavern [Main]': [
 			LaMulanaNPCDoor(get_entrance_checks('Priest Gailious')),
@@ -287,13 +291,13 @@ def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaW
 		'Tower of the Goddess [Lower]': [
 			LaMulanaNPCDoor(get_entrance_checks('Philosopher Samaranta'), lambda state: state.has('Flooded Tower of the Goddess', player)),
 			LaMulanaNPCDoor(get_entrance_checks('Naramura'), lambda state: s.combo_dev_npcs(state)),
-			LaMulanaNPCDoor(get_entrance_checks('Energetic Belmont'), lambda state: ((state.has('Flooded Tower of the Goddess', player) and s.state_lamp(state)) or (s.glitch_raindrop(state) and state.has('Feather', player))) and state.has_any({'Anchor', 'Holy Grail'}, player)),
+			LaMulanaNPCDoor(get_entrance_checks('Energetic Belmont'), lambda state: ((state.has('Flooded Tower of the Goddess', player) and s.state_lamp(state)) or (s.glitch_raindrop(state) and state.has('Feather', player))) and state.has_any(('Anchor', 'Holy Grail'), player)),
 		],
 		'Tower of Ruin [Southwest]': [
 			LaMulanaNPCDoor(get_entrance_checks('Priest Laydoc')),
 		],
 		'Tower of Ruin [Grail]': [
-			LaMulanaNPCDoor(get_entrance_checks('Mechanical Efspi'), lambda state: state.has_any({'Feather', 'Grapple Claw'}, player) and (s.attack_below(state) or s.attack_earth_spear(state) or s.attack_bomb(state) or s.attack_rolling_shuriken(state) or s.attack_caltrops(state))),
+			LaMulanaNPCDoor(get_entrance_checks('Mechanical Efspi'), lambda state: state.has_any(('Feather', 'Grapple Claw'), player) and (s.attack_below(state) or s.attack_earth_spear(state) or s.attack_bomb(state) or s.attack_rolling_shuriken(state) or s.attack_caltrops(state))),
 		],
 		'Chamber of Birth [West]': [
 			LaMulanaNPCDoor(get_entrance_checks('Priest Ashgine')),
@@ -314,7 +318,8 @@ def get_npc_entrances(world: 'LaMulanaWorld', player: int, worldstate: LaMulanaW
 
 	return npc_doors
 
-def get_npc_entrance_room_names() -> Dict[str,str]:
+
+def get_npc_entrance_room_names() -> dict[str, str]:
 	return {
 		'Elder Xelpud': 'Surface - Village of Departure (Xelpud)',
 		'Nebur': 'Surface - Village of Departure (Nebur)',

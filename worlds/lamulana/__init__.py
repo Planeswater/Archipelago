@@ -1,8 +1,8 @@
 import zipfile
 import os
 import Utils
-from typing import Dict, List, Set, Optional, TextIO, Union
-from BaseClasses import MultiWorld, Tutorial, Region, Entrance, Item, ItemClassification
+from typing import TextIO
+from BaseClasses import MultiWorld, Tutorial, Item, ItemClassification
 from Options import Accessibility
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import add_item_rule
@@ -17,7 +17,6 @@ from .DatMod import DatMod
 from .LocalConfig import LocalConfig
 from .LmFlags import GLOBAL_FLAGS, RCD_OBJECTS
 
-client_version = 1
 
 class LaMulanaWebWorld(WebWorld):
 	tutorial_en = Tutorial(
@@ -30,6 +29,7 @@ class LaMulanaWebWorld(WebWorld):
 	)
 	tutorials = [tutorial_en]
 
+
 class LaMulanaWorld(World):
 	"""
 	Challenge the ruins in the 2012 remake of La-Mulana, a puzzle platformer that focuses
@@ -37,22 +37,24 @@ class LaMulanaWorld(World):
 	Will you discover the secret treasure of life?
 	"""
 	game = "La-Mulana"
+	options: LaMulanaOptions
 	options_dataclass = LaMulanaOptions
 	web = LaMulanaWebWorld()
-	required_client_version = (0, 4, 0) #Placeholder version number
+	required_client_version = (0, 4, 0)  # Placeholder version number
 
 	worldstate: LaMulanaWorldState
 
-	item_name_to_id = {name: data.code for name, data in item_table.items()}
-	location_name_to_id = {location.name: location.code for locations in get_locations_by_region(None, None, None).values() for location in locations}
-	location_name_to_id |= {location.name: location.code for locations in get_npc_checks(None, None).values() for location in locations}
+	item_name_to_id = {name: data.code for name, data in item_table.items() if data.code is not None}
+	location_name_to_id = {location.name: location.code for locations in get_locations_by_region(None).values() for location in locations if location.code is not None}
+	location_name_to_id |= {location.name: location.code for locations in get_npc_checks(None).values() for location in locations if location.code is not None}
 	item_name_groups = get_items_by_category()
 
-	precollected_items = {}
+	precollected_items: dict[int, set[str]] = {}
 
-	def __init__(self, world : MultiWorld, player: int):
-		super().__init__(world, player)
+	def __init__(self, multiworld: MultiWorld, player: int):
+		super().__init__(multiworld, player)
 		self.precollected_items[self.player] = set()
+		self.cursed_chests: set[str] = set()
 
 	@classmethod
 	def stage_assert_generate(cls, multiworld: MultiWorld):
@@ -65,7 +67,7 @@ class LaMulanaWorld(World):
 			raise FileNotFoundError(dat_file)
 
 	def generate_early(self) -> None:
-		#Do stuff that can still modify settings
+		# Do stuff that can still modify settings
 		self.options.local_items.value |= self.item_name_groups['ShopInventory']
 
 		for setting_name, item_name in {('HolyGrailShuffle', 'Holy Grail'), ('MiraiShuffle', 'mirai.exe'), ('HermesBootsShuffle', 'Hermes\' Boots'), ('TextTraxShuffle', 'bunemon.exe')}:
@@ -77,17 +79,17 @@ class LaMulanaWorld(World):
 			elif option == 'different_world':
 				self.options.non_local_items.value.add(item_name)
 
-		starting_weapon_name = starting_weapon_names[self.options.StartingWeapon]
+		starting_weapon_name = starting_weapon_names[self.options.StartingWeapon.value]
 		main_weapons = {'Leather Whip', 'Knife', 'Key Sword', 'Axe', 'Katana'}
 		if self.options.SubweaponOnly:
-			#Starting subweapon incompatible with all locations reachable - switch to all items instead
+			# Starting subweapon incompatible with all locations reachable - switch to all items instead
 			if self.options.accessibility == Accessibility.option_full:
 				self.options.accessibility.value = Accessibility.option_minimal
-			#Starting with a main weapon incompatible with subweapon-only setting - give a random starting subweapon instead
+			# Starting with a main weapon incompatible with subweapon-only setting - give a random starting subweapon instead
 			if starting_weapon_name in main_weapons:
 				option = self.options.StartingWeapon
 				subweapon_options = [weapon_id for weapon_id, name in starting_weapon_names.items() if name not in main_weapons]
-				chosen_subweapon = self.multiworld.random.choice(subweapon_options)
+				chosen_subweapon = self.random.choice(subweapon_options)
 				option.value = chosen_subweapon
 				starting_weapon_name = starting_weapon_names[chosen_subweapon]
 			# Subweapon-only is incompatible with vanilla mother ankh
@@ -100,7 +102,7 @@ class LaMulanaWorld(World):
 			# Extinction start without entrance randomizer or glitch logic is blocked off on all sides
 			if not self.options.RandomizeTransitions and not self.options.RandomizeBacksideDoors and not self.options.RaindropsInLogic and not self.options.LampGlitchInLogic:
 				self.options.StartingLocation.value = StartingLocation.option_surface
-			elif self.options.RequireFlareGun and starting_weapon_names[starting_weapon] != 'Flare Gun':
+			elif self.options.RequireFlareGun and starting_weapon_names[self.options.StartingWeapon.value] != 'Flare Gun':
 				self.set_starting_item('Flare Gun')
 		if self.options.StartingLocation == StartingLocation.option_twin_labyrinths_front:
 			self.set_starting_item('Twin Statue')
@@ -109,10 +111,10 @@ class LaMulanaWorld(World):
 		elif self.options.StartingLocation in {StartingLocation.option_gate_of_illusion, StartingLocation.option_tower_of_ruin}:
 			self.set_starting_item('Holy Grail')
 
-
 	def create_regions(self) -> None:
-		self.worldstate = LaMulanaWorldState(self, self.multiworld, self.player)
-		create_regions_and_locations(self, self.multiworld, self.player, self.worldstate)
+		self.worldstate = LaMulanaWorldState(self)
+		self.cursed_chests = self.worldstate.cursed_chests
+		create_regions_and_locations(self)
 
 	def create_items(self) -> None:
 		success = False
@@ -123,18 +125,18 @@ class LaMulanaWorld(World):
 		print('Currently', len(self.multiworld.get_unfilled_locations()), 'unfilled locations in the pool, with', len(self.multiworld.itempool), 'items in the pool')
 
 	def set_rules(self) -> None:
-		self.multiworld.completion_condition[self.player] = lambda state: state.has_all({'Mother Defeated', 'NPC: Mulbruk'}, self.player)
+		self.multiworld.completion_condition[self.player] = lambda state: state.has_all(('Mother Defeated', 'NPC: Mulbruk'), self.player)
 
 		if self.options.RandomizeCoinChests == RandomizeCoinChests.option_include_escape_chest:
-			#local progression would be a problem for the escape coin chest - if it involves another player and loops back to us, that's fine
-			escape_location = self.multiworld.get_location('Twin Labyrinths - Escape Coin Chest', self.player)
-			add_item_rule(escape_location, lambda item: item.player != self.player or not item.classification in {ItemClassification.progression, ItemClassification.progression_skip_balancing})
+			# local progression would be a problem for the escape coin chest - if it involves another player and loops back to us, that's fine
+			escape_location = self.get_location('Twin Labyrinths - Escape Coin Chest')
+			add_item_rule(escape_location, lambda item: item.player != self.player or not item.advancement)
 
-	def extend_hint_information(self, hint_data: Dict[int, Dict[int,str]]):
+	def extend_hint_information(self, hint_data: dict[int, dict[int, str]]):
 		hint_info = {}
 		transition_display_names = self.worldstate.get_transition_spoiler_names()
 
-		def get_transition_spoiler_name(transition_name):
+		def get_transition_spoiler_name(transition_name: str):
 			target = self.worldstate.transition_map[transition_name]
 			pipe = False
 			if target in {'Pipe L1', 'Pipe R1'}:
@@ -144,7 +146,7 @@ class LaMulanaWorld(World):
 
 		if self.worldstate.npc_rando and self.worldstate.npc_mapping:
 			room_names = get_npc_entrance_room_names()
-			npc_checks = get_npc_checks(self.multiworld, self.player)
+			npc_checks = get_npc_checks(self)
 			reverse_map = {y: x for x, y in self.worldstate.npc_mapping.items()}
 			npc_transition_info = {
 				'Priest Hidlyda': 'Spring D1',
@@ -195,7 +197,9 @@ class LaMulanaWorld(World):
 					'Chamber of Birth - Dance of Life Coin Chest': 'Birth D1'
 				})
 			for check_name, transition_name in check_transition_info.items():
-				hint_info[self.multiworld.get_location(check_name, self.player).address] = get_transition_spoiler_name(transition_name)
+				location = self.get_location(check_name)
+				assert location.address is not None
+				hint_info[location.address] = get_transition_spoiler_name(transition_name)
 
 		if self.worldstate.door_rando:
 			check_door_info = {
@@ -205,11 +209,14 @@ class LaMulanaWorld(World):
 			}
 			for check_name, door_name in check_door_info.items():
 				target, req = self.worldstate.door_map[door_name]
-				hint_info[self.multiworld.get_location(check_name, self.player).address] = f'{target} ({req})'
+				location = self.get_location(check_name)
+				assert location.address is not None
+				hint_info[location.address] = f'{target} ({req})'
 
 		if self.worldstate.cursed_chests:
 			for cursed_chest_name in self.worldstate.cursed_chests:
-				location = self.multiworld.get_location(cursed_chest_name, self.player)
+				location = self.get_location(cursed_chest_name)
+				assert location.address is not None
 				hint_info[location.address] = hint_info[location.address] + ' (Cursed)' if location.address in hint_info else 'Cursed'
 
 		hint_data[self.player] = hint_info
@@ -279,8 +286,8 @@ class LaMulanaWorld(World):
 					doors_included.add(source)
 					spoiler_handle.write(f'    - {source}{arrows(source,dest,40,requirement)}{dest}\n')
 
-	def fill_slot_data(self) -> Dict[str, object]:
-		slot_data : Dict[str, object] = self.options.as_dict(
+	def fill_slot_data(self) -> dict[str, object]:
+		slot_data: dict[str, object] = self.options.as_dict(
 			'ShopDensity',
 			'RandomizeCoinChests',
 			'RandomizeTrapItems',
@@ -328,7 +335,7 @@ class LaMulanaWorld(World):
 		self.precollected_items[self.player].add(item_name)
 
 	def assign_event_items(self):
-		for location in self.multiworld.get_locations(self.player):
+		for location in self.get_locations():
 			if location.address is None:
 				item_name = location.name
 				if 'Lamp Recharge' in location.name:
@@ -340,9 +347,9 @@ class LaMulanaWorld(World):
 	# Determine which shop slots will contain local ShopInventory items and add rules to all locations to enforce that
 	# Create these ShopInventory items, returning a list with them
 	def create_shop_items(self):
-		item_list: List[Item] = []
+		item_list: list[Item] = []
 
-		starting_weapon = starting_weapon_names[self.options.StartingWeapon]
+		starting_weapon = starting_weapon_names[self.options.StartingWeapon.value]
 
 		if starting_weapon in {'Shuriken', 'Rolling Shuriken', 'Flare Gun', 'Earth Spear', 'Bomb', 'Chakram', 'Caltrops', 'Pistol'}:
 			required_subweapon_ammo = starting_weapon + ' Ammo'
@@ -354,73 +361,73 @@ class LaMulanaWorld(World):
 		else:
 			required_subweapon_ammo_2 = None
 
-		shop_locations: Set[str] = self.worldstate.get_shop_location_names()
+		shop_locations: set[str] = self.worldstate.get_shop_location_names()
 
-		#Little Brother needs weights
-		lil_bro_slot = self.multiworld.random.choice(['Yiegah Kungfu Shop Item 1', 'Yiegah Kungfu Shop Item 2', 'Yiegah Kungfu Shop Item 3'])
+		# Little Brother needs weights
+		lil_bro_slot = self.random.choice(['Yiegah Kungfu Shop Item 1', 'Yiegah Kungfu Shop Item 2', 'Yiegah Kungfu Shop Item 3'])
 		self.place_locked_item(lil_bro_slot, '5 Weights')
 		shop_locations.remove(lil_bro_slot)
 
 		if self.worldstate.is_surface_start:
 			if self.worldstate.npc_rando:
 				surface_shop_slots = []
-				npc_checks = get_npc_checks(self.multiworld, self.player)
+				npc_checks = get_npc_checks(self)
 				if self.worldstate.npc_mapping['Former Mekuri Master'] == 'Elder Xelpud':
 					if starting_weapon in {'Shuriken', 'Chakram', 'Pistol', 'Earth Spear'}:
-						#Case: Xelpud is at Former Mekuri Master and starting subweapon that can break the wall - WorldState made sure a shop was at Xelpud
+						# Case: Xelpud is at Former Mekuri Master and starting subweapon that can break the wall - WorldState made sure a shop was at Xelpud
 						possible_shop_npcs = {'Elder Xelpud'}
 					else:
-						#Case: main weapon that breaks mekuri wall, since WorldState makes sure other subweapons don't get Xelpud there
+						# Case: main weapon that breaks mekuri wall, since WorldState makes sure other subweapons don't get Xelpud there
 						possible_shop_npcs = {'Elder Xelpud', 'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}
 				else:
-					#Case: Xelpud is vanilla
+					# Case: Xelpud is vanilla
 					possible_shop_npcs = {'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}
 				for surface_npc_door in possible_shop_npcs:
 					npc_name = self.worldstate.npc_mapping[surface_npc_door]
 					if npc_name in npc_checks:
-						for location in npc_checks[npc_name]:
-							if location.name in shop_locations:
-								surface_shop_slots.append(location.name)
+						for loc in npc_checks[npc_name]:
+							if loc.name in shop_locations:
+								surface_shop_slots.append(loc.name)
 			else:
 				surface_shop_slots = ['Nebur Shop Item 1', 'Nebur Shop Item 2', 'Nebur Shop Item 3', 'Sidro Shop Item 1', 'Sidro Shop Item 2', 'Sidro Shop Item 3', 'Modro Shop Item 1', 'Modro Shop Item 2', 'Modro Shop Item 3']
 			if len(surface_shop_slots) > 0:
-				weight_slot = self.multiworld.random.choice(surface_shop_slots)
+				weight_slot = self.random.choice(surface_shop_slots)
 				self.place_locked_item(weight_slot, '5 Weights')
 				shop_locations.remove(weight_slot)
 				if required_subweapon_ammo and len(surface_shop_slots) > 1:
 					surface_shop_slots.remove(weight_slot)
-					ammo_slot = self.multiworld.random.choice(surface_shop_slots)
+					ammo_slot = self.random.choice(surface_shop_slots)
 					self.place_locked_item(ammo_slot, required_subweapon_ammo)
 					shop_locations.remove(ammo_slot)
 		else:
 			starting_shop_slots = ['Starting Shop Item 1', 'Starting Shop Item 2', 'Starting Shop Item 3']
-			weight_slot = self.multiworld.random.choice(starting_shop_slots)
+			weight_slot = self.random.choice(starting_shop_slots)
 			
 			self.place_locked_item(weight_slot, '5 Weights')
 			starting_shop_slots.remove(weight_slot)
 			shop_locations.remove(weight_slot)
 
 			if required_subweapon_ammo:
-				subweapon_slot = self.multiworld.random.choice(starting_shop_slots)
+				subweapon_slot = self.random.choice(starting_shop_slots)
 				self.place_locked_item(subweapon_slot, required_subweapon_ammo)
 				starting_shop_slots.remove(subweapon_slot)
 				shop_locations.remove(subweapon_slot)
 			if required_subweapon_ammo_2:
-				subweapon_slot = self.multiworld.random.choice(starting_shop_slots)
+				subweapon_slot = self.random.choice(starting_shop_slots)
 				self.place_locked_item(subweapon_slot, required_subweapon_ammo_2)
 				shop_locations.remove(subweapon_slot)
 
 		slot_amount = len(shop_locations) - self.options.ShopDensity
 
-		#Guaranteed minimum amounts per ammo type and weights
-		shop_items: List[str] = ['5 Weights', '5 Weights']
+		# Guaranteed minimum amounts per ammo type and weights
+		shop_items: list[str] = ['5 Weights', '5 Weights']
 		ammo_types = ['Shuriken Ammo', 'Rolling Shuriken Ammo', 'Earth Spear Ammo', 'Flare Gun Ammo', 'Bomb Ammo', 'Chakram Ammo', 'Caltrops Ammo', 'Pistol Ammo']
 		for ammo_name in ammo_types:
 			shop_items.extend([ammo_name, ammo_name])
 		if slot_amount >= 19:
-			shop_items.extend(self.multiworld.random.choices(ammo_types + ['5 Weights'], k=slot_amount - len(shop_items)))
+			shop_items.extend(self.random.choices(ammo_types + ['5 Weights'], k=slot_amount - len(shop_items)))
 
-		local_shop_inventory_list = self.multiworld.random.sample(list(shop_locations), slot_amount)
+		local_shop_inventory_list = self.random.sample(list(shop_locations), slot_amount)
 
 		shop_inventory_ids = {item_table[item_name].code for item_name in self.item_name_groups['ShopInventory']}
 		for location in self.multiworld.get_unfilled_locations(self.player):
@@ -429,15 +436,15 @@ class LaMulanaWorld(World):
 			else:
 				add_item_rule(location, lambda item: item.code not in shop_inventory_ids)
 
-		already_created = set()
+		already_created: set[str] = set()
 		for item_name in shop_items:
 			item_list.append(self.create_item(item_name, already_created))
 			already_created.add(item_name)
 
 		return item_list
 
-	def get_excluded_items(self) -> Set[str]:
-		#103 base locations (chests + NPC checks) + 27 coin chests + escape chest + 4 trap items + number of randomized items in shops + 1 Hell Temple check
+	def get_excluded_items(self) -> set[str] | None:
+		# 103 base locations (chests + NPC checks) + 27 coin chests + escape chest + 4 trap items + number of randomized items in shops + 1 Hell Temple check
 		location_pool_size = 103 + (27 if self.options.RandomizeCoinChests else 0) + (1 if self.options.RandomizeCoinChests == RandomizeCoinChests.option_include_escape_chest else 0) + (4 if self.options.RandomizeTrapItems else 0) + self.options.ShopDensity + (1 if self.options.HellTempleReward else 0)
 
 		item_pool_size = 126
@@ -461,7 +468,7 @@ class LaMulanaWorld(World):
 				if self.options.GuardianSpecificAnkhJewels:
 					item_pool_size -= 1
 			else:
-				item_pool_size -= min(amt, item_table[item_name].count)
+				item_pool_size -= min(amt, item_table[item_name].number)
 			if item_name in item_exclusion_order:
 				item_exclusion_order.remove(item_name)
 
@@ -471,8 +478,8 @@ class LaMulanaWorld(World):
 
 		return set(item_exclusion_order[:pool_diff])
 
-	def generate_item_pool(self, shop_item_amt: int) -> List[Item]:
-		item_pool: List[Item] = []
+	def generate_item_pool(self, shop_item_amt: int) -> list[Item]:
+		item_pool: list[Item] = []
 		excluded_items = self.get_excluded_items()
 
 		for name, data in item_table.items():
@@ -480,7 +487,7 @@ class LaMulanaWorld(World):
 				continue
 			if data.category == 'MainWeapon' and self.options.SubweaponOnly:
 				continue
-			item_count = data.count
+			item_count = data.number
 			if name in self.precollected_items[self.player]:
 				item_count -= 1
 			if name in self.options.start_inventory.value:
@@ -512,7 +519,7 @@ class LaMulanaWorld(World):
 
 		return item_pool
 
-	def create_item(self, name: str, exclude_shop_progression:Set[str]=None) -> Item:
+	def create_item(self, name: str, exclude_shop_progression: set[str] | None = None) -> Item:
 		data = item_table[name]
 
 		if data.category == 'ShopInventory' and data.progression:
@@ -540,24 +547,24 @@ class LaMulanaWorld(World):
 			item.classification = ItemClassification.useful
 		elif name == 'mekuri.exe' and not self.options.RequireKeyFairyCombo:
 			item.classification = ItemClassification.useful
-		elif name == 'Mulana Talisman' and len(self.worldstate.cursed_chests) == 0:
+		elif name == 'Mulana Talisman' and not self.cursed_chests:
 			item.classification = ItemClassification.filler
 
 		return item
 
-	def get_filler_item(self, k: Optional[int]):
+	def get_filler_item(self, k: int | None):
 		# Temporary placeholder for filler items until more involved RCD edits can be implemented and tested
 		return 'Shell Horn'
 		if k == 0:
 			return '200 coins'
 		elif k and k <= 2:
 			return '100 coins'
-		return self.multiworld.random.choices(['50 coins', '30 coins', '10 coins', '1 Weight'], weights=[1, 4, 6, 2], k=1)[0]
+		return self.random.choices(['50 coins', '30 coins', '10 coins', '1 Weight'], weights=[1, 4, 6, 2], k=1)[0]
 
 	def place_locked_item(self, location_name: str, item_name: str):
-		self.multiworld.get_location(location_name, self.player).place_locked_item(self.create_item(item_name))
+		self.get_location(location_name).place_locked_item(self.create_item(item_name))
 
-	def start_inventory_as_list(self) -> List[str]:
+	def start_inventory_as_list(self) -> list[str]:
 		out = []
 		for item_name, count in self.options.start_inventory.value.items():
 			for _ in range(count):
@@ -565,9 +572,9 @@ class LaMulanaWorld(World):
 		return out
 
 	def generate_output(self, output_directory: str) -> None:
-		locations = self.multiworld.get_locations(self.player)
+		locations = self.get_locations()
 
-		local_config = LocalConfig(self.multiworld, self.player)
+		local_config = LocalConfig(self)
 		rcd_mod = RcdMod("script.rcd", local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]))
 		dat_mod = DatMod("script_code.dat", local_config, self.options)
 

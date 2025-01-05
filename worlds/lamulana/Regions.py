@@ -1,4 +1,4 @@
-from typing import List, Set, Dict, Tuple, Optional, Callable
+from typing import TYPE_CHECKING, Callable
 from BaseClasses import MultiWorld, CollectionState, Region, Entrance, Location
 from .Options import starting_location_names
 from .LogicShortcuts import LaMulanaLogicShortcuts
@@ -6,6 +6,11 @@ from .CombatLogic import LaMulanaCombatLogic
 from .Locations import LocationData, get_locations_by_region
 from .NPCs import LaMulanaNPCDoor, get_npc_entrances
 from .WorldState import LaMulanaWorldState, LaMulanaTransition
+
+
+if TYPE_CHECKING:
+	from . import LaMulanaWorld
+
 
 def get_starting_region(starting_location: int):
 	initial_regions = {
@@ -31,11 +36,14 @@ def get_starting_region(starting_location: int):
 	return initial_regions[start]
 
 
-def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld, player: int, worldstate: LaMulanaWorldState):
-	s = LaMulanaLogicShortcuts(world, player)
+def create_regions_and_locations(world: 'LaMulanaWorld'):
+	multiworld = world.multiworld
+	player = world.player
+	worldstate = world.worldstate
+	s = LaMulanaLogicShortcuts(world)
 
-	locations = get_locations_by_region(world, player, worldstate)
-	npcs = get_npc_entrances(world, player, worldstate, s)
+	locations = get_locations_by_region(world)
+	npcs = get_npc_entrances(world, s)
 	cursed_chests = worldstate.cursed_chests
 
 	regions = [
@@ -78,7 +86,7 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 		create_region(multiworld, player, "Tower of the Goddess [Grail]", locations, npcs, cursed_chests),
 		create_region(multiworld, player, "Tower of the Goddess [Spaulder]", locations, npcs, cursed_chests),
 		create_region(multiworld, player, "Tower of the Goddess [Pipe]", locations, npcs, cursed_chests),
-		#create_region(multiworld, player, "Tower of the Goddess [Shield Statue]", locations, npcs, cursed_chests),
+		# create_region(multiworld, player, "Tower of the Goddess [Shield Statue]", locations, npcs, cursed_chests),
 		create_region(multiworld, player, "Inferno Cavern [Main]", locations, npcs, cursed_chests),
 		create_region(multiworld, player, "Inferno Cavern [Pazuzu]", locations, npcs, cursed_chests),
 		create_region(multiworld, player, "Inferno Cavern [Viy]", locations, npcs, cursed_chests),
@@ -149,14 +157,13 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 			create_region(multiworld, player, "Hell Temple [Dracuet]", locations, npcs, cursed_chests)
 		])
 
-
 	multiworld.regions += regions
 
-	#Connect Menu (the starting node) to our starting location's region
-	starting_region = get_starting_region(world.options.StartingLocation)
+	# Connect Menu (the starting node) to our starting location's region
+	starting_region = get_starting_region(world.options.StartingLocation.value)
 	connect(multiworld, player, 'Menu', starting_region)
 
-	#Internal connections within fields that don't change with ER
+	# Internal connections within fields that don't change with ER
 	connect(multiworld, player, 'Surface [Main]', 'Surface [Ruin Path Lower]', lambda state: s.glitch_raindrop(state))
 	connect(multiworld, player, 'Surface [Ruin Path Upper]', 'Surface [Ruin Path Lower]', lambda state: state.has_any({'Feather', 'Holy Grail'}, player))
 	connect(multiworld, player, 'Surface [Ruin Path Lower]', 'Surface [Ruin Path Upper]', lambda state: state.has('Feather', player))
@@ -169,7 +176,7 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 	connect(multiworld, player, 'Gate of Illusion [Lower]', 'Gate of Illusion [Dracuet]', lambda state: state.has('Hand Scanner', player) or s.glitch_raindrop(state))
 	connect(multiworld, player, 'Gate of Illusion [Grail]', 'Gate of Illusion [Middle]', lambda state: s.glitch_lamp(state))
 	connect(multiworld, player, 'Gate of Illusion [Dracuet]', 'Gate of Illusion [Middle]', lambda state: (s.attack_far(state) or s.attack_bomb(state)) and state.has_all({'Illusion Unlocked', 'Anchor'}, player))
-	connect(multiworld, player, 'Gate of Illusion [Middle]', 'Gate of Illusion [Dracuet]', lambda state: state.has('Holy Grail', player) or (state.has_all({'Illusion Unlocked', 'Anchor'}, player) and s.attack_chest(state))) #Puzzle solves itself when you go backwards, so backtracking doesn't require attack-far
+	connect(multiworld, player, 'Gate of Illusion [Middle]', 'Gate of Illusion [Dracuet]', lambda state: state.has('Holy Grail', player) or (state.has_all({'Illusion Unlocked', 'Anchor'}, player) and s.attack_chest(state)))  # Puzzle solves itself when you go backwards, so backtracking doesn't require attack-far
 	connect(multiworld, player, 'Gate of Illusion [Middle]', 'Gate of Illusion [Grail]')
 	connect(multiworld, player, 'Gate of Illusion [Upper]', 'Gate of Illusion [Grail]', lambda state: state.has('Holy Grail', player))
 	connect(multiworld, player, 'Gate of Illusion [Ruin]', 'Gate of Illusion [Grail]', lambda state: state.has(worldstate.get_seal_name('Chi You Seal'), player))
@@ -179,7 +186,7 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 
 	connect(multiworld, player, 'Graveyard of the Giants [West]', 'Graveyard of the Giants [Grail]', lambda state: state.has('Feather', player))
 	connect(multiworld, player, 'Graveyard of the Giants [Grail]', 'Graveyard of the Giants [West]', lambda state: state.has_any({'Holy Grail', 'Feather'}, player))
-	connect(multiworld, player, 'Graveyard of the Giants [West]', 'Graveyard of the Giants [East]', lambda state: (s.attack_bomb(state) and state.has('Ring', player)) or (state.has_all({'Bomb', 'Ring'}, player) and s.fairy_point_reachable(state, True, False) and state.can_reach('Graveyard of the Giants [Grail]', 'Region', player)))
+	connect(multiworld, player, 'Graveyard of the Giants [West]', 'Graveyard of the Giants [East]', lambda state: (s.attack_bomb(state) and state.has('Ring', player)) or (state.has_all({'Bomb', 'Ring'}, player) and s.fairy_point_reachable(state, True, False) and state.can_reach_region('Graveyard of the Giants [Grail]', player)))
 	connect(multiworld, player, 'Graveyard of the Giants [East]', 'Graveyard of the Giants [West]', lambda state: s.attack_bomb(state))
 
 	connect(multiworld, player, 'Temple of the Sun [Grail]', 'Temple of the Sun [Top Entrance]', lambda state: state.has("Hermes' Boots", player) or s.sun_watchtower(state))
@@ -302,7 +309,7 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 		connect(multiworld, player, 'Hell Temple [Entrance]', 'Hell Temple [Shop]', lambda state: s.attack_bomb(state) and state.has('Ring', player) and (state.has("Hermes' Boots", player) or s.state_lamp(state)))
 
 	if world.options.HellTempleReward:
-		combat = LaMulanaCombatLogic(world, player, s)
+		combat = LaMulanaCombatLogic(world, s)
 		connect(multiworld, player, 'Hell Temple [Shop]', 'Hell Temple [Dracuet]', lambda state: s.state_literacy(state) and s.state_key_fairy_access(state, False) and state.has_all({"Hermes' Boots", 'Grapple Claw', 'guild.exe'}, player) and combat.hell_temple_bosses(state) and (s.attack_chakram(state) or s.attack_pistol(state)))
 
 	if not worldstate.door_rando:
@@ -328,7 +335,8 @@ def create_regions_and_locations(world: 'LaMulanaWorld', multiworld: MultiWorld,
 			get_and_connect_doors(multiworld, player, worldstate, s)
 		get_and_connect_transitions(multiworld, player, worldstate, s)
 
-def remove_entrances(multiworld: MultiWorld, player: int, to_remove: Set[Entrance]):
+
+def remove_entrances(multiworld: MultiWorld, player: int, to_remove: set[Entrance] | None):
 	if not to_remove:
 		return
 	for region in multiworld.get_regions(player):
@@ -339,8 +347,9 @@ def remove_entrances(multiworld: MultiWorld, player: int, to_remove: Set[Entranc
 				entrance.connected_region.entrances.remove(entrance)
 				region.exits.remove(entrance)
 
+
 def get_and_connect_transitions(multiworld: MultiWorld, player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts):
-	entrances: Set[Entrance] = set()
+	entrances: set[Entrance] = set()
 	transitions = worldstate.get_transitions(s)
 	for transition_name, transition_data in transitions['left'].items():
 		if transition_data.is_oneway:
@@ -379,8 +388,9 @@ def get_and_connect_transitions(multiworld: MultiWorld, player: int, worldstate:
 
 	return entrances
 
+
 def connect_transitions(multiworld: MultiWorld, player: int, source: LaMulanaTransition, destination: LaMulanaTransition, both_ways=True):
-	entrances: Set[Entrance] = set()
+	entrances: set[Entrance] = set()
 
 	# Accounts for Endless L1 leading to the same region
 	if source.region == destination.region:
@@ -397,8 +407,9 @@ def connect_transitions(multiworld: MultiWorld, player: int, source: LaMulanaTra
 		entrances.update(connect_transitions(multiworld, player, destination, source, False))
 	return entrances
 
+
 def get_and_connect_doors(multiworld: MultiWorld, player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts):
-	entrances: Set[Entrance] = set()
+	entrances: set[Entrance] = set()
 	doors = worldstate.get_doors()
 	door_logic = worldstate.door_requirement_logic(s)
 	for door_name, door_data in doors.items():
@@ -411,7 +422,7 @@ def get_and_connect_doors(multiworld: MultiWorld, player: int, worldstate: LaMul
 			target = doors[target_name]
 			connection_logic = door_logic[logic_type]
 			if worldstate.include_nonboss and logic_type == 'Key':
-				#Doors without a warp within region - hopefully, fairy timer shouldn't be an issue if you can warp anywhere and have boots
+				# Doors without a warp within region - hopefully, fairy timer shouldn't be an issue if you can warp anywhere and have boots
 				if door_name in {'Inferno Spikes Door', 'Extinction Magatama Door', 'Birth Door', 'Retromausoleum Door'}:
 					connection_logic = lambda state: state.has('Hermes\'s Boots', player) and s.state_key_fairy_access(state, False) and s.state_frontside_warp(state) and s.state_backside_warp(state)
 				elif door_name in {'Surface Door', 'Mausoleum Door', 'Sun Door', 'Inferno Viy Door'}:
@@ -419,7 +430,7 @@ def get_and_connect_doors(multiworld: MultiWorld, player: int, worldstate: LaMul
 				elif door_name in {'Graveyard Door', 'Ruin Lower Door'}:
 					connection_logic = lambda state: s.state_key_fairy_access(state, True, False)
 				elif door_name == 'Illusion Door':
-					connection_logic = lambda state: s.state_key_fairy_access(state, False) and (state.can_reach('Gate of Illusion [Middle]', 'Region', player) or s.state_backside_warp(state))
+					connection_logic = lambda state: s.state_key_fairy_access(state, False) and (state.can_reach_region('Gate of Illusion [Middle]', player) or s.state_backside_warp(state))
 
 			if target_name == 'Endless One-way Exit':
 				entrances.add(connect(multiworld, player, door_data.region, target.region, lambda state: connection_logic(state) and state.has('Holy Grail', player) if callable(connection_logic) else lambda state: state.has('Holy Grail', player)))
@@ -428,7 +439,7 @@ def get_and_connect_doors(multiworld: MultiWorld, player: int, worldstate: LaMul
 	return entrances
 
 
-def connect(multiworld: MultiWorld, player: int, source: str, target: str, logic: Optional[Callable[CollectionState,bool]] = None):
+def connect(multiworld: MultiWorld, player: int, source: str, target: str, logic: Callable[[CollectionState], bool] | None = None):
 	source_region = multiworld.get_region(source, player)
 	target_region = multiworld.get_region(target, player)
 
@@ -440,7 +451,8 @@ def connect(multiworld: MultiWorld, player: int, source: str, target: str, logic
 	connection.connect(target_region)
 	return connection
 
-def create_location(player: int, location_data: LocationData, region: Region, additional_logic: Optional[Callable]=None):
+
+def create_location(player: int, location_data: LocationData, region: Region, additional_logic: Callable[[CollectionState], bool] | None = None):
 	location = Location(player, location_data.name, location_data.code, region)
 	location.file_type = location_data.file_type
 	location.zones = location_data.zones
@@ -462,7 +474,8 @@ def create_location(player: int, location_data: LocationData, region: Region, ad
 		location.show_in_spoiler = False
 	return location
 
-def create_region(multiworld: MultiWorld, player: int, region_name: str, locations_per_region: Dict[str, List[LocationData]], npcs_per_region: Dict[str,LaMulanaNPCDoor], cursed_chests: Optional[Set[str]] = {}):
+
+def create_region(multiworld: MultiWorld, player: int, region_name: str, locations_per_region: dict[str, list[LocationData]], npcs_per_region: dict[str, list[LaMulanaNPCDoor]], cursed_chests: set[str] | None = set()):
 	region = Region(region_name, player, multiworld)
 	if region_name in locations_per_region:
 		for location_data in locations_per_region[region_name]:

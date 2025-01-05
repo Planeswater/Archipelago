@@ -1,7 +1,5 @@
-from typing import Dict, Union, List
-from BaseClasses import MultiWorld
 from dataclasses import dataclass
-from Options import Toggle, DefaultOnToggle, DeathLink, Choice, Range, Option, OptionDict, OptionList, PerGameCommonOptions
+from Options import Toggle, DefaultOnToggle, DeathLink, Choice, Range, OptionDict, OptionList, PerGameCommonOptions
 
 starting_location_ids = {
 	'surface': 0,
@@ -51,6 +49,7 @@ class ShopDensity(Range):
 	default = 30
 	display_name = "Shop Item Density"
 
+
 class RandomizeCoinChests(Choice):
 	"""Not supported - must be set to false.
 # Randomizes coin chests. Including the escape chest has the potential
@@ -61,21 +60,25 @@ class RandomizeCoinChests(Choice):
 	option_include_escape_chest = 2
 	alias_true = 1
 
+
 class RandomizeTrapItems(Toggle):
 	"""Not suppoted - must be set to false.
 # Randomizes the 4 trap items and locations"""
 	display_name = "Randomize Trap Items"
+
 
 class RandomizeSeals(Toggle):
 	"""Not supported - must be set to false.
 # Individually randomizes which seal is required to break each wall seal"""
 	display_name = "Randomize seals"
 
+
 class RandomizeCursedChests(Toggle):
 	"""Not supported - must be set to false.
 # If on, a random number of chests will be cursed and require the Mulana Talisman to open.
-# If off, CursedChestCount is be ignored and the 4 vanilla cursed chests will still be cursed."""
+# If off, CursedChestCount is ignored and the 4 vanilla cursed chests will still be cursed."""
 	display_name = "Randomize Cursed Chests"
+
 
 class CursedChestCount(Range):
 	"""Not supported - value will be disregarded.
@@ -87,20 +90,24 @@ class CursedChestCount(Range):
 	range_end = 101
 	default = 4
 
+
 class RandomizeNPCs(Toggle):
 	"""Not supported - must be set to off.
 # Randomizes all NPCs and shop locations"""
 	display_name = "Randomize NPC/shop doors"
+
 
 class RandomizeDracuetsShop(Toggle):
 	"""Not supported - must be set to false.
 # Randomize Dracuet's shop in Hell Temple. If NPCs are randomized, includes the Hell Temple shop in the randomized NPC pool"""
 	display_name = "Randomize Dracuet's Shop"
 
+
 class HellTempleReward(Toggle):
 	"""Not supported - must be set to false.
 # The final reward for beating Hell Temple may be required. A treasure that should not have been created."""
 	display_name = "Hell Temple Final Reward"
+
 
 class StartingLocation(Choice):
 	"""Not supported - must be set to surface
@@ -124,8 +131,9 @@ class StartingLocation(Choice):
 	option_twin_labyrinths_back = starting_location_ids['twin (back)']
 	option_gate_of_time_surface = starting_location_ids['gate of time (surface)']
 
+
 class StartingWeapon(Choice):
-	"Set or randomize your starting weapon"
+	"""Set or randomize your starting weapon"""
 	display_name = "Starting Weapon"
 	option_leather_whip = starting_weapon_ids['Leather Whip']
 	option_knife = starting_weapon_ids['Knife']
@@ -141,6 +149,7 @@ class StartingWeapon(Choice):
 	option_caltrops = starting_weapon_ids['Caltrops']
 	option_pistol = starting_weapon_ids['Pistol']
 
+
 class SpecificItem(Choice):
 	value: int
 	option_start_with = 0
@@ -150,21 +159,26 @@ class SpecificItem(Choice):
 	alias_true = 3
 	alias_false = 0
 
+
 class HolyGrailShuffle(SpecificItem):
-	"Holy Grail placement. Starting with it is generally recommended."
+	"""Holy Grail placement. Starting with it is generally recommended."""
 	display_name = "Holy Grail Shuffle"
 
+
 class MiraiShuffle(SpecificItem):
-	"mirai.exe placement. Starting with it lets you warp more flexibly."
+	"""mirai.exe placement. Starting with it lets you warp more flexibly."""
 	display_name = "mirai.exe Shuffle"
 
+
 class HermesBootsShuffle(SpecificItem):
-	"Hermes' Boots placement. Starting with them lets you move faster from the beginning."
+	"""Hermes' Boots placement. Starting with them lets you move faster from the beginning."""
 	display_name = "Hermes' Boots Shuffle"
 
+
 class TextTraxShuffle(SpecificItem):
-	"bunemon.exe placement. Often started with as quality of life to record shop inventories and NPC locations in-game"
+	"""bunemon.exe placement. Often started with as quality of life to record shop inventories and NPC locations in-game"""
 	display_name = "TextTrax Shuffle"
+
 
 class RandomizeTransitions(Choice):
 	"""Not supported - must be set to false/off.
@@ -175,6 +189,7 @@ class RandomizeTransitions(Choice):
 	option_exclude_oneways = 1
 	option_full = 2
 	alias_true = 2
+
 
 class RandomizeBacksideDoors(Choice):
 	"""Not supported - must be set to false/off.
@@ -188,67 +203,81 @@ class RandomizeBacksideDoors(Choice):
 	option_full = 2
 	alias_true = 2
 
+
 class RequireIceCape(DefaultOnToggle):
-	"Requires the ice cape for swimming through lava. If off, you may instead need enough health to survive the swim"
+	"""Requires the ice cape for swimming through lava. If off, you may instead need enough health to survive the swim"""
 	display_name = "Require Ice Cape for Lava"
 
+
 class RequireFlareGun(DefaultOnToggle):
-	"Logically requires the flare gun to do anything in the main area of Chamber of Extinction."
+	"""Logically requires the flare gun to do anything in the main area of Chamber of Extinction."""
 	display_name = "Require Flare Gun for Chamber of Extinction"
+
 
 class RequireKeyFairyCombo(DefaultOnToggle):
 	"""Requires the software combination miracle + mekuri to summon key fairies.
 # If off, you may need to grind for key fairies (5% chance)"""
 	display_name = "Key Fairies expect miracle + mekuri"
 
+
 class AutoScanGrailTablets(DefaultOnToggle):
 	"""Quality of life - walking past a grail tablet scans it automatically.
 # Otherwise, Hand Scanner and reader.exe are required to warp back to it."""
 	display_name = "Automatically Scan Grail Tablets"
+
 
 class BossCheckpoints(DefaultOnToggle):
 	"""Quality of life - boss ankhs will trigger a quicksave prior to fighting the boss for fast retry.
 # Otherwise, you will respawn at the last grail savepoint."""
 	display_name = "Automatically Quicksave At Boss Ankhs"
 
+
 class GuardianSpecificAnkhJewels(DefaultOnToggle):
 	"""If on, each guardian fight has a specific ankh jewel needed to start the fight.
 # This is currently not enforced in-game, only logically."""
 	display_name = "Guardian-specific Ankh Jewels"
+
 
 class AlternateMotherAnkh(DefaultOnToggle):
 	"""Quality of life - If on, skips the mantra sequence to empower the key sword by adding a 9th ankh jewel.
 # Mother's ankh will be like other bosses' and cannot be activated by an empowered key sword."""
 	display_name = "Alternate Mother Ankh"
 
+
 class AncientLaMulaneseLearned(DefaultOnToggle):
 	"""Quality of Life - Ancient La-Mulanese is learned from the start, without having to read the 3 translation tablets.
 # Ancient La-Mulanese is required to learn mantras."""
 	display_name = "Ancient La-Mulanese readable from the start"
+
 
 class HardCombatLogic(Toggle):
 	"""If on, combat logic for bosses and room guardians is minimal:
 # Would it be theoretically possible to defeat this boss with these items at low HP?"""
 	display_name = "Hard Combat Logic"
 
-#Add note about what happens when you set startingweapon to a main weapon and this is on - maybe overrides it and gives a random subweapon?
+
+# Add note about what happens when you set startingweapon to a main weapon and this is on - maybe overrides it and gives a random subweapon?
 class SubweaponOnly(Toggle):
 	"""If on, removes all main weapons from the item pool, and all subweapon ammo in shops is free.
 # If your starting weapon is set to a main weapon, instead replaces it with a random subweapon.
 # Also forces AlternateMotherAnkh to be on, since there is no key sword."""
 	display_name = "Subweapon Only Mode"
 
+
 class RaindropsInLogic(Toggle):
-	"Glitch logic - raindropping may be expected with Hermes' Boots and Grapple Claw"
+	"""Glitch logic - raindropping may be expected with Hermes' Boots and Grapple Claw"""
 	display_name = "Raindrops In Logic"
 
+
 class CatPausingInLogic(Toggle):
-	"Glitch logic - cat pausing may be expected without any items"
+	"""Glitch logic - cat pausing may be expected without any items"""
 	display_name = "Cat Pausing In Logic"
 
+
 class LampGlitchInLogic(Toggle):
-	"Glitch Logic - using the lamp of time to pass through certain walls may be required"
+	"""Glitch Logic - using the lamp of time to pass through certain walls may be required"""
 	display_name = "Lamp Glitch In Logic"
+
 
 @dataclass
 class LaMulanaOptions(PerGameCommonOptions):
