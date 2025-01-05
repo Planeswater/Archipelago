@@ -2,7 +2,6 @@ from .FileMod import FileMod
 from .Items import item_table
 from .Rcd import Rcd
 from .LmFlags import GLOBAL_FLAGS, RCD_OBJECTS, TEST_OPERATIONS, WRITE_OPERATIONS, grail_flag_by_zone
-from .Locations import get_locations_by_region
 from .rcd.FlagTimer import FlagTimer
 from .rcd.InstantItem import InstantItem
 from .rcd.Operation import Operation
@@ -82,8 +81,12 @@ class RcdMod(FileMod):
 
     def apply_mods(self, dat_mod):
         self.__give_starting_items(self.start_inventory)
+
+        # Xelpud/Diary Interactions
         self.__rewrite_diary_chest()
         self.__add_diary_chest_timer()
+        self.__remove_xelpud_door()
+
         self.__rewrite_slushfund_conversation_conditions()
         self.__rewrite_four_guardian_shop_conditions(dat_mod)
         self.__rewrite_cog_chest()
@@ -176,19 +179,16 @@ class RcdMod(FileMod):
 
             flag_counter += 1
 
+    def __remove_xelpud_door(self) -> None:
+        screen = self.file_contents.zones[1].rooms[2].screens[1]
+        self.__remove_object(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"], TEST_OPERATIONS["eq"], 2)
+
     def __rewrite_diary_chest(self) -> None:
-        diary_location = next((location for _, location in enumerate(get_locations_by_region(None)["Shrine of the Mother [Main]"]) if location.name == "Shrine of the Mother - Diary Chest"))
-        for zone_index in diary_location.zones:
-            diary_screen = self.file_contents.zones[zone_index].rooms[diary_location.room].screens[diary_location.screen]
-            diary_chest = next((o for _, o in enumerate(diary_screen.objects_with_position)
-                if o.id == RCD_OBJECTS["chest"]), None)
+        objects = self.file_contents.zones[9].rooms[2].screens[1].objects_with_position
+        diary_chest = self.__find_objects_by_operation("write", objects, [RCD_OBJECTS["chest"]], GLOBAL_FLAGS["diary_chest_puzzle"])[0]
 
-            diary_shawn_test = next((test_op for _, test_op in enumerate(diary_chest.test_operations) if test_op.flag == GLOBAL_FLAGS["shrine_shawn"]), None)
-            diary_shawn_test.flag = GLOBAL_FLAGS["shrine_dragon_bone"]
-            diary_shawn_test.operation = TEST_OPERATIONS["eq"]
-            diary_shawn_test.op_value = 1
-
-            self.__add_operation_to_object("test", diary_chest, GLOBAL_FLAGS["talisman_found"], TEST_OPERATIONS["eq"], 2)
+        self.__update_operation("test", objects, [RCD_OBJECTS["chest"]], GLOBAL_FLAGS["shrine_shawn"], GLOBAL_FLAGS["shrine_dragon_bone"])
+        self.__add_operation_to_object("test", diary_chest, GLOBAL_FLAGS["talisman_found"], TEST_OPERATIONS["eq"], 2)
 
     def __add_diary_chest_timer(self) -> None:
         screen = self.file_contents.zones[9].rooms[2].screens[0]
@@ -271,6 +271,10 @@ class RcdMod(FileMod):
         # Remove Dracuet Check From Guidance Elevator Block
         guidance_elevator_hibox_objects = self.file_contents.zones[0].rooms[6].screens[0].objects_with_position
         self.__remove_operation("test", guidance_elevator_hibox_objects, [RCD_OBJECTS["hitbox_generator"]], GLOBAL_FLAGS["mulbruk_father"])
+
+        # Remove Shrine Chest Check from Xelpud Conversations
+        xelpud_conversation_objects = self.file_contents.zones[0].rooms[6].screens[0].objects_with_position
+        self.__remove_operation("test", xelpud_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"])
 
     def __create_grail_autoscans(self) -> None:
         for zone in self.file_contents.zones:
@@ -433,6 +437,9 @@ class RcdMod(FileMod):
     def __find_objects_by_operation(self, op_type, objects, object_ids, flag, operation=None, op_value=None):
         return [o for _, o in enumerate(objects) if o.id in object_ids and len([op for op in getattr(o, self.__op_type(op_type)) if self.__op_matches(op, flag, operation, op_value)]) > 0]
 
+    def __find_object_index_by_operation(self, op_type, objects, object_ids, flag, operation=None, op_value=None):
+        return next(i for i, o in enumerate(objects) if o.id in object_ids and len([op for op in getattr(o, self.__op_type(op_type)) if self.__op_matches(op, flag, operation, op_value)]) > 0)
+
     def __find_operation_index(self, ops, flag, operation=None, op_value=None):
         return next(i for i, op in enumerate(ops) if self.__op_matches(op, flag, operation, op_value))
 
@@ -442,6 +449,21 @@ class RcdMod(FileMod):
         return op.flag == flag and (operation is None or op.operation == operation) and (op_value is None or op.op_value == op_value)
 
     # Write Methods
+
+    def __remove_object(self, screen, op_type, objects, object_ids, flag, operation, op_value):
+        object_index = self.__find_object_index_by_operation(op_type, objects, object_ids, flag, operation, op_value)
+        obj = objects[object_index]
+
+        screen.objects_length -= 1
+
+        # id (2) + test_operations_length (.5) + write_operations_length (.5) + parameters_length (1) + x_pos (2) + y_pos (2)
+        object_size = 8
+
+        # test_operations (4*len) + write_operations(4*len) + parameters (2*len)
+        object_size += ((obj.test_operations_length + obj.write_operations_length) * 4) + (obj.parameters_length * 2)
+
+        del objects[object_index]
+        self.file_size -= object_size
 
     def __update_position(self, op_type, objects, object_ids, flag, x_pos, y_pos, operation=None, op_value=None):
         objs = self.__find_objects_by_operation(op_type, objects, object_ids, flag, operation, op_value)
