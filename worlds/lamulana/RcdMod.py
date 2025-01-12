@@ -42,9 +42,10 @@ class RcdMod(FileMod):
         ]
     )
 
-    def __init__(self, filename, local_config, options, start_inventory):
+    def __init__(self, filename, local_config, options, start_inventory, cursed_chests):
         super().__init__(Rcd, filename, local_config, options, GLOBAL_FLAGS["rcd_filler_items"])
         self.start_inventory = start_inventory
+        self.cursed_chests = cursed_chests
 
     def place_item_in_location(self, item, item_id, location) -> None:
         object_type_params = self.RCD_OBJECT_PARAMS.get(location.object_type)
@@ -108,12 +109,20 @@ class RcdMod(FileMod):
 
     def __place_item(self, objects, object_type, param_index, param_len, location, location_id, item_id, original_obtain_flag, new_obtain_flag, obtain_value, item_mod, iterations, item):
         for _ in range(iterations):
-            location = next((o for _, o in enumerate(objects) if o.id == object_type and o.parameters[param_index] == location_id+item_mod and len(o.parameters) < param_len), None)
+            item_location = next((o for _, o in enumerate(objects) if o.id == object_type and o.parameters[param_index] == location_id+item_mod and len(o.parameters) < param_len), None)
 
-            for test_op in location.test_operations:
+            if object_type == RCD_OBJECTS["chest"]:
+                if location.name in self.cursed_chests:
+                    item_location.parameters[3] = 1
+                    item_location.parameters[4] = 1
+                    item_location.parameters[5] = 50
+                else:
+                    item_location.parameters[3] = 0
+
+            for test_op in item_location.test_operations:
                 if test_op.flag == original_obtain_flag:
                     test_op.flag = new_obtain_flag
-            for write_op in location.write_operations:
+            for write_op in item_location.write_operations:
                 if write_op.flag == original_obtain_flag:
                     write_op.flag = new_obtain_flag
                     if object_type in (RCD_OBJECTS["naked_item"], RCD_OBJECTS["instant_item"], RCD_OBJECTS["scan"]):
@@ -125,7 +134,7 @@ class RcdMod(FileMod):
 
             # Surface Map customization
             if original_obtain_flag == GLOBAL_FLAGS["surface_map"]:
-                self.__fix_surface_map_scan(objects, location, original_obtain_flag)
+                self.__fix_surface_map_scan(objects, item_location, original_obtain_flag)
             
             # Shrine of the Mother Map Crusher customization
             if original_obtain_flag == GLOBAL_FLAGS["shrine_map"]:
@@ -148,9 +157,9 @@ class RcdMod(FileMod):
             if original_obtain_flag == GLOBAL_FLAGS["mekuri"]:
                 self.__update_operation("test", objects, [RCD_OBJECTS["language_conversation"], RCD_OBJECTS["texture_draw_animation"]], original_obtain_flag, new_obtain_flag)
 
-            location.parameters[param_index] = item_id+item_mod
-            location.parameters.append(1)
-            location.parameters_length += 1
+            item_location.parameters[param_index] = item_id+item_mod
+            item_location.parameters.append(1)
+            item_location.parameters_length += 1
             self.file_size += 2
 
     def __fix_surface_map_scan(self, objects, location, obtain_flag):
