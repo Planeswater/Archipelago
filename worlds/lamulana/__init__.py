@@ -575,7 +575,7 @@ class LaMulanaWorld(World):
 		locations = self.get_locations()
 
 		local_config = LocalConfig(self)
-		rcd_mod = RcdMod("script.rcd", local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]))
+		rcd_mod = RcdMod("script.rcd", local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]), self.cursed_chests)
 		dat_mod = DatMod("script_code.dat", local_config, self.options)
 
 		dat_mod.apply_mods()

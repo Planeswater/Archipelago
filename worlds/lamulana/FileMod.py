@@ -41,5 +41,5 @@ class FileMod:
         if params.get("object_type") == RCD_OBJECTS["chest"]:
             params["obtain_value"] = 2
         else:
-            params["obtain_value"] = item.obtain_value if item.obtain_value is not None else location.obtain_value
+            params["obtain_value"] = item.obtain_value if item and item.obtain_value is not None else location.obtain_value
         self.local_config.add_item(params)

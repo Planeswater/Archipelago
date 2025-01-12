@@ -55,9 +55,10 @@ class DatMod(FileMod):
             item_id = item_table["Map (Surface)"].game_code
         data_indices = [i for i, v in enumerate(entries) if v.header == HEADERS["data"]]
         entries[data_indices[0]].contents.values[location.slot] = item_id
-        item_cost = item.cost if item.cost is not None else 10
+        item_cost = item.cost if item and item.cost is not None else 10
         entries[data_indices[1]].contents.values[location.slot] = item_cost
-        entries[data_indices[2]].contents.values[location.slot] = item.quantity
+        item_quantity = item.quantity if item and item.quantity is not None else 1
+        entries[data_indices[2]].contents.values[location.slot] = item_quantity
         entries[data_indices[3]].contents.values[location.slot] = new_obtain_flag
         if obtain_value > 1:
             entries[data_indices[6]].contents.values[location.slot] = new_obtain_flag
