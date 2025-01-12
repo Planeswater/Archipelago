@@ -41,6 +41,7 @@ GLOBAL_FLAGS = {
     "guardians_killed": 0x102,
     "diary_found": 0x104,
     "mulana_talisman": 0x105,
+    "swimsuit_found": 0x106,
     "amphisbaena_ankh_puzzle": 0x133,
     "sakit_ankh_puzzle": 0x164,
     "ellmac_ankh_puzzle": 0x178,
