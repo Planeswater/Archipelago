@@ -219,6 +219,9 @@ class RcdMod(FileMod):
         self.__remove_object_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 1014)
         self.__remove_object_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], TEST_OPERATIONS["lteq"], 55)
 
+        swimsuit_reaction_door = self.__find_objects_by_operation("test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["swimsuit_found"])[0]
+        self.__add_operation_to_object("test", swimsuit_reaction_door, GLOBAL_FLAGS["mulbruk_father"], TEST_OPERATIONS["neq"], 9)
+
     def __rewrite_four_guardian_shop_conditions(self, dat_mod):
         msx2_replacement_flag = dat_mod.find_shop_flag("nebur_guardian", 0)
         objects = self.file_contents.zones[1].rooms[2].screens[0].objects_with_position
