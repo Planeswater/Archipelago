@@ -94,7 +94,8 @@ class RcdMod(FileMod):
         self.__rewrite_four_guardian_shop_conditions(dat_mod)
         self.__rewrite_cog_chest()
         self.__rewrite_fishman_alt_shop()
-        self.__clean_up_test_operations()
+
+        self.__clean_up_operations()
 
         if self.options.AutoScanGrailTablets:
             self.__create_grail_autoscans()
@@ -265,7 +266,7 @@ class RcdMod(FileMod):
         fishman_alt_door.add_ops(test_ops, [])
         fishman_alt_door.add_to_screen(self, screen)
 
-    def __clean_up_test_operations(self):
+    def __clean_up_operations(self):
         # Remove Fairy Conversation Requirement from Buer Room Ladder
         buer_objects = self.file_contents.zones[3].rooms[2].screens[1].objects_with_position
         self.__remove_operation("test", buer_objects, [RCD_OBJECTS["hitbox_generator"]], GLOBAL_FLAGS["endless_fairyqueen"])
@@ -296,10 +297,14 @@ class RcdMod(FileMod):
         xelpud_conversation_objects = self.file_contents.zones[0].rooms[6].screens[0].objects_with_position
         self.__remove_operation("test", xelpud_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"])
 
-        # Remove Unknown Flag from Mulbruk Conversations
+        # Remove Unknown Test from Mulbruk Conversations
         mulbruk_conversation_objects = self.file_contents.zones[3].rooms[3].screens[0].objects_with_position
         self.__remove_operation("test", mulbruk_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["mulbruk_conversation_unknown"])
         self.__update_operation("test", mulbruk_conversation_objects, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], GLOBAL_FLAGS["score"], old_op_value=56, old_operation=TEST_OPERATIONS["gteq"], new_op_value=0)
+
+        # Remove Book of the Dead Write Flag from Anubis Kill
+        anubis_objects = self.file_contents.zones[12].rooms[10].screens[0].objects_with_position
+        self.__remove_operation("write", anubis_objects, [RCD_OBJECTS["big_anubis"]], GLOBAL_FLAGS["mulbruk_book_of_the_dead"])
 
     def __create_grail_autoscans(self) -> None:
         for zone in self.file_contents.zones:
