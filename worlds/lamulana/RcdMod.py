@@ -8,6 +8,9 @@ from .rcd.Operation import Operation
 from .rcd.TextureDrawAnimation import TextureDrawAnimation
 from .rcd.LemezaDetector import LemezaDetector
 from .rcd.GrailPoint import GrailPoint
+from .rcd.Ladder import Ladder
+from .rcd.WarpDoor import WarpDoor
+from .rcd.Dais import Dais
 
 
 class RcdMod(FileMod):
@@ -94,6 +97,14 @@ class RcdMod(FileMod):
         self.__rewrite_four_guardian_shop_conditions(dat_mod)
         self.__rewrite_cog_chest()
         self.__rewrite_fishman_alt_shop()
+
+        self.__add_dimensional_orb_ladder()
+        self.__add_true_shrine_doors()
+        self.__add_moonlight_to_twin_lockout_fix()
+        self.__add_chain_whip_lockout_fix()
+        self.__add_flail_whip_lockout_fix()
+        self.__add_angel_shield_lockout_fix()
+        self.__add_hardmode_toggle()
 
         self.__clean_up_operations()
 
@@ -265,6 +276,99 @@ class RcdMod(FileMod):
         ]
         fishman_alt_door.add_ops(test_ops, [])
         fishman_alt_door.add_to_screen(self, screen)
+
+    def __add_chain_whip_lockout_fix(self):
+        objects = self.file_contents.zones[5].rooms[3].screens[0].objects_with_position
+
+        # Swap permanent puzzle flags to screen flags so puzzle resets on lockout
+        self.__update_operation("test", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_left"], GLOBAL_FLAGS["screen_flag_2e"])
+        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_left"], GLOBAL_FLAGS["screen_flag_2e"])
+
+        self.__update_operation("test", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_right"], GLOBAL_FLAGS["screen_flag_2f"])
+        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_right"], GLOBAL_FLAGS["screen_flag_2f"])
+
+    def __add_angel_shield_lockout_fix(self):
+        screen = self.file_contents.zones[17].rooms[8].screens[0]
+
+        left_dais_flag_timer = FlagTimer(delay_frames=30)
+        left_dais_test_ops = [
+            Operation.create(GLOBAL_FLAGS["dimensional_angel_shield_dais_left"], TEST_OPERATIONS["eq"], 0),
+            Operation.create(GLOBAL_FLAGS["dimensional_children_dead"], TEST_OPERATIONS["gteq"], 11)
+        ]
+        left_dais_write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_00"], WRITE_OPERATIONS["assign"], 1)]
+        left_dais_flag_timer.add_ops(left_dais_test_ops, left_dais_write_ops)
+        left_dais_flag_timer.add_to_screen(self, screen)
+
+        right_dais_flag_timer = FlagTimer(delay_frames=30)
+        right_dais_test_ops = [
+            Operation.create(GLOBAL_FLAGS["dimensional_angel_shield_dais_right"], TEST_OPERATIONS["eq"], 0),
+            Operation.create(GLOBAL_FLAGS["dimensional_children_dead"], TEST_OPERATIONS["gteq"], 11)
+        ]
+        right_dais_write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_01"], WRITE_OPERATIONS["assign"], 1)]
+        right_dais_flag_timer.add_ops(right_dais_test_ops, right_dais_write_ops)
+        right_dais_flag_timer.add_to_screen(self, screen)
+
+    def __add_dimensional_orb_ladder(self) -> None:
+        screen = self.file_contents.zones[17].rooms[10].screens[0]
+
+        ladder = Ladder(28, 31, 0, 8, 2, 660, 0, 0, 1)
+        test_ops = [Operation.create(GLOBAL_FLAGS["ushumgallu_state"], TEST_OPERATIONS["eq"], 2)]
+        write_ops = []
+
+        ladder.add_ops(test_ops, write_ops)
+        ladder.add_to_screen(self, screen)
+
+    def __add_true_shrine_doors(self):
+        doors = [
+            {"room": 0, "screen": 0, "x": 17, "y": 4, "dest_x": 340, "dest_y": 92}, # Upper Entrance
+            {"room": 8, "screen": 1, "x": 13, "y": 40, "dest_x": 300, "dest_y": 320}, # Lower Entrance 
+            {"room": 7, "screen": 0, "x": 25, "y": 4, "dest_x": 500, "dest_y": 80}, # Grail Point
+            {"room": 9, "screen": 0, "x": 25, "y": 20, "dest_x": 300, "dest_y": 332} # Treasury
+        ]
+
+        for door in doors:
+            screen = self.file_contents.zones[18].rooms[door["room"]].screens[door["screen"]]
+            warp_door = WarpDoor(door["x"], door["y"], 0, 9, door["room"], door["screen"], door["dest_x"], door["dest_y"])
+            warp_door.add_ops([], [])
+            warp_door.add_to_screen(self, screen)
+
+            door_graphic = TextureDrawAnimation(x=door["x"]-1, y=door["y"]-2, image_file=-1, layer=-1, image_x=0, image_y=512, dx=80, dy=80, pause_frames=1, max_alpha=255)
+            door_graphic.add_to_screen(self, screen)
+
+    def __add_moonlight_to_twin_lockout_fix(self):
+        screen = self.file_contents.zones[12].rooms[2].screens[0]
+
+        timer = FlagTimer()
+        test_ops = [Operation.create(GLOBAL_FLAGS["moonlight_to_twin_breakable_floor"], TEST_OPERATIONS["eq"], 1)]
+        write_ops = [Operation.create(GLOBAL_FLAGS["moonlight_to_twin_breakable_floor"], WRITE_OPERATIONS["assign"], 0)]
+        timer.add_ops(test_ops, write_ops)
+        timer.add_to_screen(self, screen)
+
+    def __add_flail_whip_lockout_fix(self):
+        locations = [{"room": 5, "screen": 1}, {"room": 6, "screen": 2}]
+        for location in locations:
+            screen = self.file_contents.zones[13].rooms[location["room"]].screens[location["screen"]]
+
+            timer = FlagTimer()
+            test_ops = [Operation.create(GLOBAL_FLAGS["flail_whip_puzzle"], TEST_OPERATIONS["eq"], 1)]
+            write_ops = [Operation.create(GLOBAL_FLAGS["flail_whip_puzzle"], WRITE_OPERATIONS["assign"], 0)]
+            timer.add_ops(test_ops, write_ops)
+            timer.add_to_screen(self, screen)
+
+    def __add_hardmode_toggle(self):
+        screen = self.file_contents.zones[2].rooms[2].screens[0]
+
+        ops = [
+            {"test_op": "eq", "write_val": 0},
+            {"test_op": "lt", "write_val": 2}
+        ]
+        for op in ops:
+            dais = Dais(28, 5)
+            test_ops = [Operation.create(GLOBAL_FLAGS["hardmode"], TEST_OPERATIONS[op["test_op"]], 2)]
+            write_ops = [Operation.create(GLOBAL_FLAGS["hardmode"], WRITE_OPERATIONS["assign"], op["write_val"])]
+            dais.add_ops(test_ops, write_ops)
+            dais.add_to_screen(self, screen)
+
 
     def __clean_up_operations(self):
         # Remove Fairy Conversation Requirement from Buer Room Ladder
