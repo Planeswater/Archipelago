@@ -9,6 +9,11 @@ class RcdObject:
         self.rcd_object.write_operations = write_ops
 
     def add_to_screen(self, rcd_mod, screen):
+        if not hasattr(self.rcd_object, 'test_operations'):
+            self.rcd_object.test_operations = []
+        if not hasattr(self.rcd_object, 'write_operations'):
+            self.rcd_object.write_operations = []
+
         self.rcd_object.test_operations_length = len(self.rcd_object.test_operations)
         self.rcd_object.write_operations_length = len(self.rcd_object.write_operations)
         self.rcd_object.parameters_length = len(self.rcd_object.parameters)
