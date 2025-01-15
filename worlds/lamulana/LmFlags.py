@@ -91,6 +91,7 @@ GLOBAL_FLAGS = {
     "replacement_surface_map_scan": 0x85f,
     "replacement_slushfund_conversation": 0x860,
     "replacement_cog_puzzle": 0x861,
+    "mother_ankh_jewel_recovery": 0x862,
     "rcd_filler_items": 0xc18,
     "dat_filler_items": 0xe0c
 }
@@ -131,6 +132,7 @@ RCD_OBJECTS = {
     "lemeza_detector": 0x14,
     "counterweight_platform": 0x33,
     "chest": 0x2c,
+    "ankh": 0x2e,
     "naked_item": 0x2f,
     "big_anubis": 0x6b,
     "vimana": 0x71,
@@ -140,9 +142,11 @@ RCD_OBJECTS = {
     "scannable": 0x9e,
     "grail_point": 0x9f,
     "language_conversation": 0xa0,
+    "animation": 0xa3,
     "fairy_keyspot": 0xa7,
     "explosion": 0xb4,
     "instant_item": 0xb5,
+    "mother_ankh": 0xc0,
     "scan": 0xc3
 }
 

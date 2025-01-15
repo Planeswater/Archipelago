@@ -118,6 +118,9 @@ class RcdMod(FileMod):
         if self.options.AncientLaMulaneseLearned:
             self.__create_ancient_lamulanese_timer()
 
+        if self.options.AlternateMotherAnkh:
+            self.__create_alternate_mother_ankh()
+
     # RCD Mod Methods
 
     def __place_item(self, objects, object_type, param_index, param_len, location, location_id, item_id, original_obtain_flag, new_obtain_flag, obtain_value, item_mod, iterations, item):
@@ -205,7 +208,7 @@ class RcdMod(FileMod):
 
     def __remove_xelpud_door(self) -> None:
         screen = self.file_contents.zones[1].rooms[2].screens[1]
-        self.__remove_object_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"], TEST_OPERATIONS["eq"], 2)
+        self.__remove_objects_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["shrine_diary_chest"], TEST_OPERATIONS["eq"], 2)
 
     def __rewrite_diary_chest(self) -> None:
         objects = self.file_contents.zones[9].rooms[2].screens[1].objects_with_position
@@ -228,9 +231,9 @@ class RcdMod(FileMod):
 
     def __rewrite_mulbruk_doors(self) -> None:
         screen = self.file_contents.zones[3].rooms[3].screens[0]
-        self.__remove_object_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 926)
-        self.__remove_object_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 1014)
-        self.__remove_object_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], TEST_OPERATIONS["lteq"], 55)
+        self.__remove_objects_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 926)
+        self.__remove_objects_by_parameter(screen, screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], 4, 1014)
+        self.__remove_objects_by_operation(screen, "test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["score"], TEST_OPERATIONS["lteq"], 55)
 
         swimsuit_reaction_door = self.__find_objects_by_operation("test", screen.objects_with_position, [RCD_OBJECTS["language_conversation"]], GLOBAL_FLAGS["swimsuit_found"])[0]
         self.__add_operation_to_object("test", swimsuit_reaction_door, GLOBAL_FLAGS["mulbruk_father"], TEST_OPERATIONS["neq"], 9)
@@ -577,6 +580,43 @@ class RcdMod(FileMod):
         flag_timer.add_ops(test_ops, write_ops)
         flag_timer.add_to_screen(self, screen)
 
+    def __create_alternate_mother_ankh(self):
+        mother_screen = self.file_contents.zones[18].rooms[3].screens[0]
+
+        # Remove Mother Animations
+        self.__remove_objects_by_id(mother_screen, mother_screen.objects_with_position, [RCD_OBJECTS["animation"]])
+
+        # Modify Mother Ankh
+        mother_ankhs = self.__find_objects_by_id(mother_screen.objects_with_position, [RCD_OBJECTS["mother_ankh"]])
+        for ankh in mother_ankhs:
+            ankh.id = RCD_OBJECTS["ankh"]
+            ankh.parameters[0] = 8
+            ankh.write_operations[0].op_value = 1
+            ankh.write_operations[1].op_value = 2
+            ankh.y_pos += 3
+
+        # Return Ankh Jewel if warped out of fight
+        surface_screen = self.file_contents.zones[1].rooms[11].screens[0]
+
+        instant_item = InstantItem(5, 3, 19, 12, 16, 39)
+        test_ops = [Operation.create(GLOBAL_FLAGS["mother_ankh_jewel_recovery"], TEST_OPERATIONS["eq"], 1)]
+        write_ops = [
+            Operation.create(GLOBAL_FLAGS["mother_ankh_jewel_recovery"], WRITE_OPERATIONS["assign"], 0),
+            Operation.create(GLOBAL_FLAGS["mother_state"], WRITE_OPERATIONS["assign"], 1)
+        ]
+        instant_item.add_ops(test_ops, write_ops)
+        instant_item.add_to_screen(self, surface_screen)
+
+        flag_timer = FlagTimer()
+        test_ops = [
+            Operation.create(GLOBAL_FLAGS["mother_state"], TEST_OPERATIONS["eq"], 2),
+            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0),
+            Operation.create(GLOBAL_FLAGS["mother_ankh_jewel_recovery"], TEST_OPERATIONS["eq"], 0)
+        ]
+        write_ops = [Operation.create(GLOBAL_FLAGS["mother_ankh_jewel_recovery"], WRITE_OPERATIONS["assign"], 1)]
+        flag_timer.add_ops(test_ops, write_ops)
+        flag_timer.add_to_screen(self, surface_screen)
+
     # Utility Methods
 
     def __op_type(self, op):
@@ -584,11 +624,20 @@ class RcdMod(FileMod):
 
     # Search Methods
 
+    def __find_objects_by_id(self, objects, object_ids):
+        return [o for _, o in enumerate(objects) if o.id in object_ids]
+
+    def __find_object_index_by_id(self, objects, object_ids):
+        return next(i for i, o in enumerate(objects) if o.id in object_ids)
+
     def __find_objects_by_operation(self, op_type, objects, object_ids, flag, operation=None, op_value=None):
         return [o for _, o in enumerate(objects) if o.id in object_ids and len([op for op in getattr(o, self.__op_type(op_type)) if self.__op_matches(op, flag, operation, op_value)]) > 0]
 
     def __find_object_index_by_operation(self, op_type, objects, object_ids, flag, operation=None, op_value=None):
         return next(i for i, o in enumerate(objects) if o.id in object_ids and len([op for op in getattr(o, self.__op_type(op_type)) if self.__op_matches(op, flag, operation, op_value)]) > 0)
+
+    def __find_objects_by_parameter(self, objects, object_ids, param_index, param_value):
+        return [o for _, o in enumerate(objects) if o.id in object_ids and o.parameters[param_index] == param_value]
 
     def __find_object_index_by_parameter(self, objects, object_ids, param_index, param_value):
         return next(i for i, o in enumerate(objects) if o.id in object_ids and o.parameters[param_index] == param_value)
@@ -603,13 +652,20 @@ class RcdMod(FileMod):
 
     # Write Methods
 
-    def __remove_object_by_operation(self, screen, op_type, objects, object_ids, flag, operation, op_value):
-        object_index = self.__find_object_index_by_operation(op_type, objects, object_ids, flag, operation, op_value)
-        self.__remove_object(screen, objects, object_index)
+    def __remove_objects_by_id(self, screen, objects, object_ids):
+        for _ in self.__find_objects_by_id(objects, object_ids):
+            object_index = self.__find_object_index_by_id(objects, object_ids)
+            self.__remove_object(screen, objects, object_index)
 
-    def __remove_object_by_parameter(self, screen, objects, object_ids, param_index, param_value):
-        object_index = self.__find_object_index_by_parameter(objects, object_ids, param_index, param_value)
-        self.__remove_object(screen, objects, object_index)
+    def __remove_objects_by_operation(self, screen, op_type, objects, object_ids, flag, operation=None, op_value=None):
+        for _ in self.__find_objects_by_operation(op_type, objects, object_ids, flag, operation, op_value):
+            object_index = self.__find_object_index_by_operation(op_type, objects, object_ids, flag, operation, op_value)
+            self.__remove_object(screen, objects, object_index)
+
+    def __remove_objects_by_parameter(self, screen, objects, object_ids, param_index, param_value):
+        for _ in self.__find_objects_by_parameter(objects, object_ids, param_index, param_value):
+            object_index = self.__find_object_index_by_parameter(objects, object_ids, param_index, param_value)
+            self.__remove_object(screen, objects, object_index)
 
     def __remove_object(self, screen, objects, object_index):
         obj = objects[object_index]
