@@ -98,6 +98,7 @@ GLOBAL_FLAGS = {
 
 HEADERS = {
     "break": 0x000a,
+    "white_space": 0x0020,
     "flag": 0x0040,
     "flag2": 0x0041,
     "item": 0x0042,
