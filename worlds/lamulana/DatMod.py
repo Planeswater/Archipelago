@@ -282,9 +282,7 @@ class DatMod(FileMod):
             return HEADERS["white_space"]
         encoded_char = FONT.find(char)
         if encoded_char == -1:
-            print("Busted character: ", char)
             encoded_char = FONT.find("?")
-            print("Fixed character: ", encoded_char)
         return encoded_char + 0x100
 
     def __char_entry(self, codepoint):
