@@ -14,8 +14,8 @@ from .Locations import get_locations_by_region
 from .Regions import create_regions_and_locations
 from .RcdMod import RcdMod
 from .DatMod import DatMod
+from .SavMod import SavMod
 from .LocalConfig import LocalConfig
-from .LmFlags import GLOBAL_FLAGS, RCD_OBJECTS
 
 
 class LaMulanaWebWorld(WebWorld):
@@ -43,6 +43,10 @@ class LaMulanaWorld(World):
 	required_client_version = (0, 4, 0)  # Placeholder version number
 
 	worldstate: LaMulanaWorldState
+
+	RCD_FILENAME = "script.rcd"
+	DAT_FILENAME = "script_code.dat"
+	SAV_FILENAME = "lm_00.sav"
 
 	item_name_to_id = {name: data.code for name, data in item_table.items() if data.code is not None}
 	location_name_to_id = {location.name: location.code for locations in get_locations_by_region(None).values() for location in locations if location.code is not None}
@@ -575,8 +579,9 @@ class LaMulanaWorld(World):
 		locations = self.get_locations()
 
 		local_config = LocalConfig(self)
-		rcd_mod = RcdMod("script.rcd", local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]), self.cursed_chests)
-		dat_mod = DatMod("script_code.dat", local_config, self.options)
+		rcd_mod = RcdMod(self.RCD_FILENAME, local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]), self.cursed_chests)
+		dat_mod = DatMod(self.DAT_FILENAME, local_config, self.options)
+		sav_mod = SavMod(self.options)
 
 		dat_mod.apply_mods()
 
@@ -593,8 +598,11 @@ class LaMulanaWorld(World):
 
 		rcd_mod.apply_mods(dat_mod)
 
+		sav_mod.apply_mods()
+
 		output_path = os.path.join(output_directory, f"AP-{self.multiworld.seed_name}-P{self.player}-{self.multiworld.get_file_safe_player_name(self.player)}_{Utils.__version__}.zip")
 		with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED, True, 9) as output_zip:
-			output_zip.writestr("script.rcd", rcd_mod.write_file())
-			output_zip.writestr("script_code.dat", dat_mod.write_file())
+			output_zip.writestr(self.RCD_FILENAME, rcd_mod.write_file())
+			output_zip.writestr(self.DAT_FILENAME, dat_mod.write_file())
+			output_zip.writestr(self.SAV_FILENAME, sav_mod.write_file())
 			output_zip.writestr("lamulana-config.toml", local_config.write_file())

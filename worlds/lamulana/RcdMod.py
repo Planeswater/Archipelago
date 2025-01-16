@@ -2,6 +2,7 @@ from .FileMod import FileMod
 from .Items import item_table
 from .Rcd import Rcd
 from .LmFlags import GLOBAL_FLAGS, RCD_OBJECTS, TEST_OPERATIONS, WRITE_OPERATIONS, grail_flag_by_zone
+from .Options import starting_weapon_names
 from .rcd.FlagTimer import FlagTimer
 from .rcd.InstantItem import InstantItem
 from .rcd.Operation import Operation
@@ -191,8 +192,11 @@ class RcdMod(FileMod):
     def __give_starting_items(self, items) -> None:
         flag_counter = 0
         starting_room = self.file_contents.zones[1].rooms[2].screens[1]
+        starting_weapon = starting_weapon_names[self.options.StartingWeapon.value]
 
         for item_name in items:
+            if item_name == starting_weapon:
+                continue
             item = item_table[item_name]
 
             item_giver = InstantItem(x=0, y=0, item=item.game_code, width=160, height=120, sound=39)
