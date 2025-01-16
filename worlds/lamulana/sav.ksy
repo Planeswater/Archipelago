@@ -1,5 +1,5 @@
 meta:
-  id: lmsave
+  id: sav
   file-extension: sav
   endian: be
 seq:
@@ -43,14 +43,14 @@ seq:
     type: u1
   - id: held_use_item_slot
     type: u1
-  - id: total_emails
+  - id: num_emails
     type: u2
   - id: received_emails
     type: u2
   - id: emails
     type: email
     repeat: expr
-    repeat-expr: total_emails
+    repeat-expr: num_emails
   - id: equipped_software
     type: u1
     repeat: expr
