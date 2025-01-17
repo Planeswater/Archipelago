@@ -290,10 +290,10 @@ class RcdMod(FileMod):
 
         # Swap permanent puzzle flags to screen flags so puzzle resets on lockout
         self.__update_operation("test", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_left"], GLOBAL_FLAGS["screen_flag_2e"])
-        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_left"], GLOBAL_FLAGS["screen_flag_2e"])
+        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"], RCD_OBJECTS["crusher"]], GLOBAL_FLAGS["chain_whip_dais_left"], GLOBAL_FLAGS["screen_flag_2e"])
 
         self.__update_operation("test", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_right"], GLOBAL_FLAGS["screen_flag_2f"])
-        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"]], GLOBAL_FLAGS["chain_whip_dais_right"], GLOBAL_FLAGS["screen_flag_2f"])
+        self.__update_operation("write", objects, [RCD_OBJECTS["trigger_dais"], RCD_OBJECTS["crusher"]], GLOBAL_FLAGS["chain_whip_dais_right"], GLOBAL_FLAGS["screen_flag_2f"])
 
     def __add_angel_shield_lockout_fix(self):
         screen = self.file_contents.zones[17].rooms[8].screens[0]
