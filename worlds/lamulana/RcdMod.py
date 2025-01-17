@@ -98,6 +98,7 @@ class RcdMod(FileMod):
         self.__rewrite_four_guardian_shop_conditions(dat_mod)
         self.__rewrite_cog_chest()
         self.__rewrite_fishman_alt_shop()
+        self.__rewrite_boss_ankhs()
 
         self.__add_dimensional_orb_ladder()
         self.__add_true_shrine_doors()
@@ -112,9 +113,6 @@ class RcdMod(FileMod):
 
         if self.options.AutoScanGrailTablets:
             self.__create_grail_autoscans()
-
-        if self.options.BossCheckpoints:
-            self.__create_boss_checkpoints()
 
         if self.options.AncientLaMulaneseLearned:
             self.__create_ancient_lamulanese_timer()
@@ -452,125 +450,179 @@ class RcdMod(FileMod):
                                 lemeza_detector.add_ops(test_ops, write_ops)
                                 lemeza_detector.add_to_screen(self, screen)
 
-    def __create_boss_checkpoints(self) -> None:
+    def __rewrite_boss_ankhs(self) -> None:
         # Amphisbaena
         amphisbaena_screen = self.file_contents.zones[0].rooms[8].screens[1]
-        amphisbaena_grail_point = GrailPoint(x=15, y=44, card=41)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["amphisbaena_ankh_puzzle"], TEST_OPERATIONS["eq"], 5),
-            Operation.create(GLOBAL_FLAGS["amphisbaena_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        amphisbaena_grail_point.add_ops(test_ops, write_ops)
-        amphisbaena_grail_point.add_to_screen(self, amphisbaena_screen)
+        if self.options.BossCheckpoints:
+            amphisbaena_grail_point = GrailPoint(x=15, y=44, card=41)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["amphisbaena_ankh_puzzle"], TEST_OPERATIONS["eq"], 5),
+                Operation.create(GLOBAL_FLAGS["amphisbaena_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            amphisbaena_grail_point.add_ops(test_ops, write_ops)
+            amphisbaena_grail_point.add_to_screen(self, amphisbaena_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            amphisbaena_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in amphisbaena_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["amphisbaena_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Sakit
         sakit_screen = self.file_contents.zones[2].rooms[8].screens[1]
-        sakit_grail_point = GrailPoint(x=45, y=6, card=75)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["sakit_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
-            Operation.create(GLOBAL_FLAGS["sakit_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        sakit_grail_point.add_ops(test_ops, write_ops)
-        sakit_grail_point.add_to_screen(self, sakit_screen)
+        if self.options.BossCheckpoints:
+            sakit_grail_point = GrailPoint(x=45, y=6, card=75)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["sakit_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
+                Operation.create(GLOBAL_FLAGS["sakit_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            sakit_grail_point.add_ops(test_ops, write_ops)
+            sakit_grail_point.add_to_screen(self, sakit_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            sakit_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in sakit_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["sakit_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Ellmac
         ellmac_screen = self.file_contents.zones[3].rooms[8].screens[0]
-        ellmac_grail_point = GrailPoint(x=20, y=16, card=104)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["ellmac_ankh_puzzle"], TEST_OPERATIONS["eq"], 5),
-            Operation.create(GLOBAL_FLAGS["ellmac_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        ellmac_grail_point.add_ops(test_ops, write_ops)
-        ellmac_grail_point.add_to_screen(self, ellmac_screen)
+        if self.options.BossCheckpoints:
+            ellmac_grail_point = GrailPoint(x=20, y=16, card=104)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["ellmac_ankh_puzzle"], TEST_OPERATIONS["eq"], 5),
+                Operation.create(GLOBAL_FLAGS["ellmac_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            ellmac_grail_point.add_ops(test_ops, write_ops)
+            ellmac_grail_point.add_to_screen(self, ellmac_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            ellmac_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in ellmac_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["ellmac_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Bahamut
         bahamut_screen = self.file_contents.zones[4].rooms[4].screens[0]
-        bahamut_grail_point = GrailPoint(x=19, y=17, card=136)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["bahamut_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
-            Operation.create(GLOBAL_FLAGS["bahamut_room_flooded"], TEST_OPERATIONS["eq"], 1),
-            Operation.create(GLOBAL_FLAGS["bahamut_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        bahamut_grail_point.add_ops(test_ops, write_ops)
-        bahamut_grail_point.add_to_screen(self, bahamut_screen)
+        if self.options.BossCheckpoints:
+            bahamut_grail_point = GrailPoint(x=19, y=17, card=136)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["bahamut_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
+                Operation.create(GLOBAL_FLAGS["bahamut_room_flooded"], TEST_OPERATIONS["eq"], 1),
+                Operation.create(GLOBAL_FLAGS["bahamut_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            bahamut_grail_point.add_ops(test_ops, write_ops)
+            bahamut_grail_point.add_to_screen(self, bahamut_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            bahamut_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in bahamut_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["bahamut_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Viy
         viy_screen = self.file_contents.zones[5].rooms[8].screens[1]
-        viy_grail_point = GrailPoint(x=23, y=28, card=149)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["viy_ankh_puzzle"], TEST_OPERATIONS["eq"], 4),
-            Operation.create(GLOBAL_FLAGS["viy_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        viy_grail_point.add_ops(test_ops, write_ops)
-        viy_grail_point.add_to_screen(self, viy_screen)
+        if self.options.BossCheckpoints:
+            viy_grail_point = GrailPoint(x=23, y=28, card=149)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["viy_ankh_puzzle"], TEST_OPERATIONS["eq"], 4),
+                Operation.create(GLOBAL_FLAGS["viy_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            viy_grail_point.add_ops(test_ops, write_ops)
+            viy_grail_point.add_to_screen(self, viy_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            viy_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in viy_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["viy_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Palenque
         palenque_screen = self.file_contents.zones[6].rooms[9].screens[1]
-        palenque_grail_point = GrailPoint(x=47, y=20, card=170)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["palenque_ankh_puzzle"], TEST_OPERATIONS["eq"], 3),
-            Operation.create(GLOBAL_FLAGS["palenque_screen_mural"], TEST_OPERATIONS["eq"], 3),
-            Operation.create(GLOBAL_FLAGS["palenque_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        palenque_grail_point.add_ops(test_ops, write_ops)
-        palenque_grail_point.add_to_screen(self, palenque_screen)
+        if self.options.BossCheckpoints:
+            palenque_grail_point = GrailPoint(x=47, y=20, card=170)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["palenque_ankh_puzzle"], TEST_OPERATIONS["eq"], 3),
+                Operation.create(GLOBAL_FLAGS["palenque_screen_mural"], TEST_OPERATIONS["eq"], 3),
+                Operation.create(GLOBAL_FLAGS["palenque_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            palenque_grail_point.add_ops(test_ops, write_ops)
+            palenque_grail_point.add_to_screen(self, palenque_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            palenque_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in palenque_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["palenque_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Baphomet
         baphomet_screen = self.file_contents.zones[7].rooms[4].screens[1]
-        baphomet_grail_point = GrailPoint(x=47, y=4, card=188)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["baphomet_ankh_puzzle"], TEST_OPERATIONS["eq"], 2),
-            Operation.create(GLOBAL_FLAGS["baphomet_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        baphomet_grail_point.add_ops(test_ops, write_ops)
-        baphomet_grail_point.add_to_screen(self, baphomet_screen)
+        if self.options.BossCheckpoints:
+            baphomet_grail_point = GrailPoint(x=47, y=4, card=188)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["baphomet_ankh_puzzle"], TEST_OPERATIONS["eq"], 2),
+                Operation.create(GLOBAL_FLAGS["baphomet_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            baphomet_grail_point.add_ops(test_ops, write_ops)
+            baphomet_grail_point.add_to_screen(self, baphomet_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            baphomet_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in baphomet_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["baphomet_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Tiamat
         tiamat_screen = self.file_contents.zones[17].rooms[9].screens[0]
-        tiamat_grail_point = GrailPoint(x=15, y=4, card=368)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["tiamat_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
-            Operation.create(GLOBAL_FLAGS["tiamat_state"], TEST_OPERATIONS["lt"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        tiamat_grail_point.add_ops(test_ops, write_ops)
-        tiamat_grail_point.add_to_screen(self, tiamat_screen)
+        if self.options.BossCheckpoints:
+            tiamat_grail_point = GrailPoint(x=15, y=4, card=368)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["tiamat_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
+                Operation.create(GLOBAL_FLAGS["tiamat_state"], TEST_OPERATIONS["lt"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            tiamat_grail_point.add_ops(test_ops, write_ops)
+            tiamat_grail_point.add_to_screen(self, tiamat_screen)
+
+        if self.options.GuardianSpecificAnkhJewels:
+            tiamat_ankhs = self.__find_objects_by_id(amphisbaena_screen.objects_with_position, [RCD_OBJECTS["ankh"]])
+            for ankh in tiamat_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["tiamat_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
         # Mother
-        mother_screen = self.file_contents.zones[18].rooms[3].screens[1]
-        mother_grail_point = GrailPoint(x=33, y=20, card=231)
-        test_ops = [
-            Operation.create(GLOBAL_FLAGS["mother_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
-            Operation.create(GLOBAL_FLAGS["mother_state"], TEST_OPERATIONS["lteq"], 2),
-            Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
-            Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
-        ]
-        write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
-        mother_grail_point.add_ops(test_ops, write_ops)
-        mother_grail_point.add_to_screen(self, mother_screen)
+        mother_room = self.file_contents.zones[18].rooms[3]
+        if self.options.BossCheckpoints:
+            mother_grail_point = GrailPoint(x=33, y=20, card=231)
+            test_ops = [
+                Operation.create(GLOBAL_FLAGS["mother_ankh_puzzle"], TEST_OPERATIONS["eq"], 1),
+                Operation.create(GLOBAL_FLAGS["mother_state"], TEST_OPERATIONS["lteq"], 2),
+                Operation.create(GLOBAL_FLAGS["screen_flag_02"], TEST_OPERATIONS["eq"], 0),
+                Operation.create(GLOBAL_FLAGS["escape"], TEST_OPERATIONS["eq"], 0)
+            ]
+            write_ops = [Operation.create(GLOBAL_FLAGS["screen_flag_02"], WRITE_OPERATIONS["assign"], 1)]
+            mother_grail_point.add_ops(test_ops, write_ops)
+            mother_grail_point.add_to_screen(self, mother_room.screens[1])
+
+        if self.options.GuardianSpecificAnkhJewels and self.options.AlternateMotherAnkh:
+            mother_ankhs = self.__find_objects_by_id(mother_room.screens[0].objects_with_position, [RCD_OBJECTS["mother_ankh"]])
+            for ankh in mother_ankhs:
+                self.__add_operation_to_object("test", ankh, GLOBAL_FLAGS["mother_ankh_jewel_found"], TEST_OPERATIONS["gteq"], 1)
 
     def __create_ancient_lamulanese_timer(self):
         screen = self.file_contents.zones[1].rooms[2].screens[1]
