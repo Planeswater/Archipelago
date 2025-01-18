@@ -108,6 +108,7 @@ GLOBAL_FLAGS = {
     "orb_count_incremented_guidance": 0x355,
     "mulbruk_conversation_unknown": 0x36a,
     "escape": 0x382,
+    "kill_flag": 0x3e9,
     "grail_tablet_surface": 0x54e,
     "starting_items": 0x84f,
     "mother_ankh_jewel_found": 0x853,
@@ -115,6 +116,7 @@ GLOBAL_FLAGS = {
     "replacement_slushfund_conversation": 0x860,
     "replacement_cog_puzzle": 0x861,
     "mother_ankh_jewel_recovery": 0x862,
+    "randomizer_save_loaded": 0x863,
     "rcd_filler_items": 0xc18,
     "dat_filler_items": 0xe0c
 }
