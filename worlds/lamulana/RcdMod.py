@@ -108,6 +108,7 @@ class RcdMod(FileMod):
         self.__add_angel_shield_lockout_fix()
         self.__add_hardmode_toggle()
         self.__add_sacred_orb_timers()
+        self.__add_new_game_kill_timer()
 
         self.__clean_up_operations()
 
@@ -390,6 +391,15 @@ class RcdMod(FileMod):
             ]
             timer.add_ops(test_ops, write_ops)
             timer.add_to_screen(self, screen)
+
+    def __add_new_game_kill_timer(self):
+        screen = self.file_contents.zones[1].rooms[2].screens[1]
+
+        timer = FlagTimer()
+        test_ops = [Operation.create(GLOBAL_FLAGS["randomizer_save_loaded"], TEST_OPERATIONS["neq"], 1)]
+        write_ops = [Operation.create(GLOBAL_FLAGS["kill_flag"], WRITE_OPERATIONS["assign"], 1)]
+        timer.add_ops(test_ops, write_ops)
+        timer.add_to_screen(self, screen)
 
     def __clean_up_operations(self):
         # Remove Fairy Conversation Requirement from Buer Room Ladder

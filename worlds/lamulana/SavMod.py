@@ -137,6 +137,7 @@ class SavMod(FileMod):
         flags = [0 for _ in range(4096)]
         flags[GLOBAL_FLAGS["end_start_animation"]] = 1
         flags[GLOBAL_FLAGS["hell_dlc"]] = 1
+        flags[GLOBAL_FLAGS["randomizer_save_loaded"]] = 1
         return flags
 
     def __bunemon_record(self, slot_number=0xff, field_map_card=0, field_map_record=0, location_card=0, location_record=0, text_card=0, text_record=0, is_tablet=0):
