@@ -31,7 +31,7 @@ class LocationData(NamedTuple):
 def get_locations_by_region(world: "LaMulanaWorld | None") -> dict[str, list[LocationData]]:
 	if world:
 		player = world.player
-		worldstate = world.worldstate
+		worldstate = world.worldstate if hasattr(world, "worldstate") else None
 		s = LaMulanaLogicShortcuts(world)
 		combat = LaMulanaCombatLogic(world, s)
 
