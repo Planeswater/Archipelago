@@ -155,7 +155,7 @@ def get_locations_by_region(world: "LaMulanaWorld | None") -> dict[str, list[Loc
 		],
 		"Twin Labyrinths [Poison 1]": [
 			LocationData("Twin Labyrinths - Map Chest", 2359044, lambda state: state.has("Twin Poison Cleared", player) and s.attack_forward(state), is_cursable=True, file_type='rcd', zones=[7], room=2, screen=2, object_type=0x2c, item_id=70, original_obtain_flag=0xd8, obtain_flag=0x842, obtain_value=2),
-			LocationData("Twin Poison Cleared", None, lambda state: state.has("Twin Statue", player) or (state.can_reach_region("Twin Labyrinths [Poison 2]", player), True) and state.has('Holy Grail', player), True)
+			LocationData("Twin Poison Cleared", None, lambda state: state.has("Twin Statue", player) or (state.can_reach_region("Twin Labyrinths [Poison 2]", player) and state.has('Holy Grail', player)), True)
 		],
 		"Twin Labyrinths [Upper Grail]": [
 			LocationData("Twin Labyrinths (Front) Grail Tablet", None, lambda state: s.state_read_grail(state), True)
