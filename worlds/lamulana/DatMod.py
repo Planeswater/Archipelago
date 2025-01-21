@@ -2,6 +2,7 @@ from .FileMod import FileMod
 from .Dat import Dat
 from .Items import item_table
 from .LmFlags import GLOBAL_FLAGS, HEADERS, CARDS
+from .Options import starting_weapon_names
 
 FONT = \
         u"!\"&'(),-./0123456789:?ABCDEFGHIJKLMNOPQRSTUVWXYZ"\
@@ -90,8 +91,16 @@ class DatMod(FileMod):
         data_indices = [i for i, v in enumerate(entries) if v.header == HEADERS["data"]]
         entries[data_indices[0]].contents.values[location.slot] = item_id
         item_cost = item.cost if item and item.cost is not None else 10
-        entries[data_indices[1]].contents.values[location.slot] = item_cost
         item_quantity = item.quantity if item and item.quantity is not None else 1
+
+        if item.category == 'ShopInventory' and location.item:
+            # Subweapon Start - make ammo for starting subweapon free and max out in 1 purchase. Same behavior for subweapon only across all subweapons
+            max_quantities = {'Shuriken Ammo': 150, 'Rolling Shuriken Ammo': 100, 'Earth Spear Ammo': 80, 'Flare Gun Ammo': 80, 'Bomb Ammo': 30, 'Chakram Ammo': 10, 'Caltrops Ammo': 80, 'Pistol Ammo': 3}
+            if location.item.name == f'{starting_weapon_names[self.options.StartingWeapon.value]} Ammo' or (self.options.SubweaponOnly and location.item.name in max_quantities.keys()):
+                item_cost = 0
+                item_quantity = max_quantities[location.item.name]
+
+        entries[data_indices[1]].contents.values[location.slot] = item_cost
         entries[data_indices[2]].contents.values[location.slot] = item_quantity
         entries[data_indices[3]].contents.values[location.slot] = new_obtain_flag
         if obtain_value > 1:

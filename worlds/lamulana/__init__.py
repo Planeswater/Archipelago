@@ -9,7 +9,7 @@ from worlds.generic.Rules import add_item_rule
 from .Options import starting_weapon_names, LaMulanaOptions, StartingLocation, StartingWeapon, RandomizeCoinChests
 from .WorldState import LaMulanaWorldState
 from .NPCs import get_npc_checks, get_npc_entrance_room_names
-from .Items import ItemData, item_table, get_items_by_category, item_exclusion_order
+from .Items import item_table, get_items_by_category, item_exclusion_order
 from .Locations import get_locations_by_region
 from .Regions import create_regions_and_locations
 from .RcdMod import RcdMod
@@ -347,10 +347,6 @@ class LaMulanaWorld(World):
 				item = Item(item_name, ItemClassification.progression, None, self.player)
 				location.place_locked_item(item)
 
-	# Create a new ItemData object based on an existing item, updating only the cost and quantity fields to the new values provided
-	def update_itemdata_cost_quantity(self, data, new_cost=None, new_quantity=None):
-		return ItemData(data.category, data.code, progression=data.progression, useful=data.useful, trap=data.trap, number=data.number, game_code=data.game_code, cost=new_cost if new_cost is not None else data.cost, quantity=new_quantity if new_quantity is not None else data.quantity, obtain_flag=data.obtain_flag, obtain_value=data.obtain_value)
-
 	# Place specific shop items that must be present at an early shop (weights, subweapon ammo) and weights in Little Brother's shop
 	# Determine which shop slots will contain local ShopInventory items and add rules to all locations to enforce that
 	# Create these ShopInventory items, returning a list with them
@@ -369,16 +365,6 @@ class LaMulanaWorld(World):
 			required_subweapon_ammo_2 = 'Flare Gun Ammo'
 		else:
 			required_subweapon_ammo_2 = None
-
-		max_quantities = {'Shuriken Ammo': 150, 'Rolling Shuriken Ammo': 100, 'Earth Spear Ammo': 80, 'Flare Gun Ammo': 80, 'Bomb Ammo': 30, 'Chakram Ammo': 10, 'Caltrops Ammo': 80, 'Pistol Ammo': 3}
-		if self.options.SubweaponOnly:
-			# Subweapon Only - make all shop ammo free and fill to max
-			for subweapon in subweapon_options:
-				item_name = f'{subweapon} Ammo'
-				item_table[item_name] = self.update_itemdata_cost_quantity(item_table[item_name], 0, max_quantities[item_name])
-		elif required_subweapon_ammo:
-			# Subweapon Start - make ammo for that subweapon free and fill to max
-			item_table[required_subweapon_ammo] = self.update_itemdata_cost_quantity(item_table[required_subweapon_ammo], 0, max_quantities[required_subweapon_ammo])
 
 		shop_locations: set[str] = self.worldstate.get_shop_location_names()
 
