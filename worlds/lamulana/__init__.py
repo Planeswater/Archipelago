@@ -394,7 +394,7 @@ class LaMulanaWorld(World):
 							if loc.name in shop_locations:
 								surface_shop_slots.append(loc.name)
 			else:
-				surface_shop_slots = ['Nebur Shop Item 1', 'Nebur Shop Item 2', 'Nebur Shop Item 3', 'Sidro Shop Item 1', 'Sidro Shop Item 2', 'Sidro Shop Item 3', 'Modro Shop Item 1', 'Modro Shop Item 2', 'Modro Shop Item 3']
+				surface_shop_slots = ['Modro Shop Item 1', 'Modro Shop Item 2', 'Modro Shop Item 3']
 			if len(surface_shop_slots) > 0:
 				weight_slot = self.random.choice(surface_shop_slots)
 				self.place_locked_item(weight_slot, '5 Weights')
