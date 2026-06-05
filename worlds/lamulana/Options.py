@@ -51,7 +51,6 @@ class ShopDensity(Range):
 
 
 class RandomizeCoinChests(Choice):
-	"""Not supported - must be set to false.
 # Randomizes coin chests. Including the escape chest has the potential
 # to create rude item chains if NPCs or seals are randomized."""
 	display_name = "Randomize coin chests"

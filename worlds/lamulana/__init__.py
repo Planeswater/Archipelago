@@ -1,4 +1,3 @@
-import zipfile
 import os
 import Utils
 from typing import TextIO
@@ -6,16 +5,12 @@ from BaseClasses import MultiWorld, Tutorial, Item, ItemClassification
 from Options import Accessibility
 from worlds.AutoWorld import World, WebWorld
 from worlds.generic.Rules import add_item_rule
-from .Options import starting_weapon_names, LaMulanaOptions, StartingLocation, StartingWeapon, RandomizeCoinChests
+from .Options import starting_weapon_names, LaMulanaOptions, StartingLocation, RandomizeCoinChests
 from .WorldState import LaMulanaWorldState
 from .NPCs import get_npc_checks, get_npc_entrance_room_names
 from .Items import item_table, get_items_by_category, item_exclusion_order
 from .Locations import get_locations_by_region
 from .Regions import create_regions_and_locations
-from .RcdMod import RcdMod
-from .DatMod import DatMod
-from .SavMod import SavMod
-from .LocalConfig import LocalConfig
 
 
 class LaMulanaWebWorld(WebWorld):
@@ -44,10 +39,6 @@ class LaMulanaWorld(World):
 
 	worldstate: LaMulanaWorldState
 
-	RCD_FILENAME = "script.rcd"
-	DAT_FILENAME = "script_code.dat"
-	SAV_FILENAME = "lm_00.sav"
-
 	item_name_to_id = {name: data.code for name, data in item_table.items() if data.code is not None}
 	location_name_to_id = {location.name: location.code for locations in get_locations_by_region(None).values() for location in locations if location.code is not None}
 	location_name_to_id |= {location.name: location.code for locations in get_npc_checks(None).values() for location in locations if location.code is not None}
@@ -59,16 +50,6 @@ class LaMulanaWorld(World):
 		super().__init__(multiworld, player)
 		self.precollected_items[self.player] = set()
 		self.cursed_chests: set[str] = set()
-
-	@classmethod
-	def stage_assert_generate(cls, multiworld: MultiWorld):
-		rcd_file = Utils.user_path("script.rcd")
-		if not os.path.exists(rcd_file):
-			raise FileNotFoundError(rcd_file)
-
-		dat_file = Utils.user_path("script_code.dat")
-		if not os.path.exists(dat_file):
-			raise FileNotFoundError(dat_file)
 
 	def generate_early(self) -> None:
 		# Do stuff that can still modify settings
@@ -291,7 +272,9 @@ class LaMulanaWorld(World):
 					spoiler_handle.write(f'    - {source}{arrows(source,dest,40,requirement)}{dest}\n')
 
 	def fill_slot_data(self) -> dict[str, object]:
-		slot_data: dict[str, object] = self.options.as_dict(
+		slot_data: dict[str, object] = {}
+		slot_data['seed'] = self.multiworld.seed_name
+		slot_data['options'] = self.options.as_dict(
 			'ShopDensity',
 			'RandomizeCoinChests',
 			'RandomizeTrapItems',
@@ -324,6 +307,11 @@ class LaMulanaWorld(World):
 			'LampGlitchInLogic'
 		)
 		slot_data['cursed_chests'] = self.worldstate.cursed_chests
+		slot_data['start_inventory'] = self.start_inventory_as_list() + list(self.precollected_items[self.player])
+		slot_data['locations'] = [self.export_location(location) for location in self.multiworld.get_locations(self.player)]
+		slot_data['item_table'] = item_table
+		slot_data['player_id'] = self.player
+		slot_data['players'] = [{"id": player_id, "name": self.multiworld.player_name[player_id]} for player_id in self.multiworld.player_ids]
 		if self.worldstate.npc_rando:
 			slot_data['npc_locations'] = self.worldstate.npc_mapping
 		if self.options.RandomizeSeals:
@@ -334,12 +322,30 @@ class LaMulanaWorld(World):
 			slot_data['door_data'] = self.worldstate.door_map
 		return slot_data
 
+	def export_location(self, location):
+		export_location = {
+			'address': location.address,
+			'cards': location.cards,
+			'item': {'name': location.item.name, 'player': location.item.player},
+			'item_id': location.item_id,
+			'name': location.name,
+			'object_type': location.object_type,
+			'room': location.room,
+			'screen': location.screen,
+			'slot': location.slot,
+			'zones': location.zones,
+			'file_type': location.file_type,
+			'original_obtain_flag': location.original_obtain_flag,
+			'obtain_flag': location.obtain_flag
+		}
+		return export_location
+
 	def set_starting_item(self, item_name: str):
 		self.multiworld.push_precollected(self.create_item(item_name))
 		self.precollected_items[self.player].add(item_name)
 
 	def assign_event_items(self):
-		for location in self.get_locations():
+		for location in self.multiworld.get_locations(self.player):
 			if location.address is None:
 				item_name = location.name
 				if 'Lamp Recharge' in location.name:
@@ -407,7 +413,7 @@ class LaMulanaWorld(World):
 		else:
 			starting_shop_slots = ['Starting Shop Item 1', 'Starting Shop Item 2', 'Starting Shop Item 3']
 			weight_slot = self.random.choice(starting_shop_slots)
-			
+
 			self.place_locked_item(weight_slot, '5 Weights')
 			starting_shop_slots.remove(weight_slot)
 			shop_locations.remove(weight_slot)
@@ -575,35 +581,3 @@ class LaMulanaWorld(World):
 			for _ in range(count):
 				out.append(item_name)
 		return out
-
-	def generate_output(self, output_directory: str) -> None:
-		locations = self.get_locations()
-
-		local_config = LocalConfig(self)
-		rcd_mod = RcdMod(self.RCD_FILENAME, local_config, self.options, self.start_inventory_as_list() + list(self.precollected_items[self.player]), self.cursed_chests)
-		dat_mod = DatMod(self.DAT_FILENAME, local_config, self.options)
-		sav_mod = SavMod(self.options)
-
-		dat_mod.apply_mods()
-
-		for location in locations:
-			item = item_table.get(location.item.name)
-			if (item is None and location.item.player == self.player) or location.address is None:
-				continue
-
-			item_id = item.game_code if item is not None and location.item.player == self.player else 83
-			if location.file_type == 'rcd':
-				rcd_mod.place_item_in_location(item, item_id, location)
-			elif location.file_type == 'dat':
-				dat_mod.place_item_in_location(item, item_id, location)
-
-		rcd_mod.apply_mods(dat_mod)
-
-		sav_mod.apply_mods()
-
-		output_path = os.path.join(output_directory, f"AP-{self.multiworld.seed_name}-P{self.player}-{self.multiworld.get_file_safe_player_name(self.player)}_{Utils.__version__}.zip")
-		with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED, True, 9) as output_zip:
-			output_zip.writestr(self.RCD_FILENAME, rcd_mod.write_file())
-			output_zip.writestr(self.DAT_FILENAME, dat_mod.write_file())
-			output_zip.writestr(self.SAV_FILENAME, sav_mod.write_file())
-			output_zip.writestr("lamulana-config.toml", local_config.write_file())
