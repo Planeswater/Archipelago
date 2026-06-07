@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Callable, NamedTuple
 from BaseClasses import MultiWorld, CollectionState, Location, LocationProgressType, Item, ItemClassification
+from Options import Accessibility
 from .Options import RandomizeTransitions, RandomizeBacksideDoors, StartingLocation, starting_weapon_names
 from .Locations import get_locations_by_region
 from .LogicShortcuts import LaMulanaLogicShortcuts
@@ -169,23 +170,23 @@ class LaMulanaWorldState:
 
 	def layout_fulfills_accessibility(self, state: CollectionState):
 		state = state.copy()
-		accessibility = self.world.options.accessibility.value
+		accessibility_full = self.world.options.accessibility == Accessibility.option_full
 
 		beatable_fulfilled = False
 
 		def location_relevant(location: Location) -> bool:
-			if location.progress_type != LocationProgressType.EXCLUDED and (accessibility == 'locations' or location.is_event or location.progress_type == LocationProgressType.PRIORITY):
+			if location.progress_type != LocationProgressType.EXCLUDED and (accessibility_full or location.is_event or location.progress_type == LocationProgressType.PRIORITY):
 				return True
 			return False
 
 		def all_done() -> bool:
 			if not beatable_fulfilled:
 				return False
-			if accessibility != 'minimal' and len(locations) > 0:
+			if accessibility_full and len(locations) > 0:
 				return False
-			# Make sure shops aren't made inaccessible due to the transition map, since we will place progression (ammo) on them
+			# If NPC rando is on and Retrosurface isn't reachable, make sure shops aren't made inaccessible, since we will place progression (ammo) on them
 			# Reaching Fobos, Mulbruk, and Fairy Queen is already covered by the seed being beatable
-			if not state.can_reach_region('Gate of Time [Surface]', self.player):
+			if self.npc_rando and not state.can_reach_region('Gate of Time [Surface]', self.player):
 				if self.shop_npc_found({'8-bit Elder'}) or self.npc_mapping['8-bit Elder'] == 'Elder Xelpud':
 					return False
 			return True
