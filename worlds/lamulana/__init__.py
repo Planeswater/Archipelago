@@ -111,7 +111,7 @@ class LaMulanaWorld(World):
 		shop_items = self.create_shop_items()
 		self.multiworld.itempool += shop_items
 		self.multiworld.itempool += self.generate_item_pool(len(shop_items))
-		logging.info('Currently', len(self.multiworld.get_unfilled_locations()), 'unfilled locations in the pool, with', len(self.multiworld.itempool), 'items in the pool')
+		logging.info(f'Currently {len(self.multiworld.get_unfilled_locations())} unfilled locations in the pool, with {len(self.multiworld.itempool)} items in the pool')
 
 
 	def set_rules(self) -> None:
