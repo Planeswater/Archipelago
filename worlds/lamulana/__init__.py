@@ -11,6 +11,7 @@ from .NPCs import get_npc_checks, get_npc_entrance_room_names
 from .Items import item_table, get_items_by_category, item_exclusion_order
 from .Locations import get_locations_by_region
 from .Regions import create_regions_and_locations
+import logging
 
 
 class LaMulanaWebWorld(WebWorld):
@@ -100,6 +101,9 @@ class LaMulanaWorld(World):
 		self.worldstate = LaMulanaWorldState(self)
 		self.cursed_chests = self.worldstate.cursed_chests
 		create_regions_and_locations(self)
+		if self.worldstate.transition_rando or self.worldstate.door_rando:
+			logging.info(f'La-Mulana player {self.multiworld.player_name[self.player]} (Player {self.player}) successful entrance layout:')
+			logging.info(self.make_transition_info_str())
 
 	def create_items(self) -> None:
 		success = False
@@ -107,7 +111,8 @@ class LaMulanaWorld(World):
 		shop_items = self.create_shop_items()
 		self.multiworld.itempool += shop_items
 		self.multiworld.itempool += self.generate_item_pool(len(shop_items))
-		print('Currently', len(self.multiworld.get_unfilled_locations()), 'unfilled locations in the pool, with', len(self.multiworld.itempool), 'items in the pool')
+		logging.info('Currently', len(self.multiworld.get_unfilled_locations()), 'unfilled locations in the pool, with', len(self.multiworld.itempool), 'items in the pool')
+
 
 	def set_rules(self) -> None:
 		self.multiworld.completion_condition[self.player] = lambda state: state.has_all(('Mother Defeated', 'NPC: Mulbruk'), self.player)
@@ -206,30 +211,28 @@ class LaMulanaWorld(World):
 
 		hint_data[self.player] = hint_info
 
-	def write_spoiler_header(self, spoiler_handle: TextIO) -> None:
-		spoiler_handle.write(f'Cursed Chests ({len(self.worldstate.cursed_chests)}):\n')
-		spoiler_handle.write(f'    - {self.worldstate.cursed_chests if len(self.worldstate.cursed_chests) else "None"}\n')
-
+	def make_transition_info_str(self) -> str:
+		out = ''
 		def space_count(name):
 			return ' ' * (25 - len(name))
 
 		if self.worldstate.npc_rando and self.worldstate.npc_mapping:
-			spoiler_handle.write('NPC Randomizer:\n')
+			out += 'NPC Randomizer:\n'
 			room_names = get_npc_entrance_room_names()
 			reverse_map = {y: x for x, y in self.worldstate.npc_mapping.items()}
 			for npc_name in self.worldstate.get_npc_hint_order():
 				if npc_name in reverse_map:
 					npc_door = reverse_map[npc_name]
-					spoiler_handle.write(f'    - {npc_name}:{space_count(npc_name)}{room_names[npc_door]}\n')
+					out += f'    - {npc_name}:{space_count(npc_name)}{room_names[npc_door]}\n'
 
 		if self.options.RandomizeSeals:
 			seal_spoilers = {value: [seal_name for seal_name, seal_val in self.worldstate.seal_map.items() if seal_val == value] for value in {1, 2, 3, 4}}
 			seal_order = self.worldstate.get_seal_spoiler_order()
 			for seal_val, seal_name in [(1, 'Origin Seal'), (2, 'Birth Seal'), (3, 'Life Seal'), (4, 'Death Seal')]:
-				spoiler_handle.write(f'{seal_name}:\n')
+				out += f'{seal_name}:\n'
 				for seal_location in seal_order:
 					if self.worldstate.seal_map[seal_location] == seal_val:
-						spoiler_handle.write(f'    - {seal_location}\n')
+						out += f'    - {seal_location}\n'
 
 		def arrows(source, dest, base_length, inner_text=None, display_names=None) -> str:
 			oneways = {'Endless L1'}
@@ -252,7 +255,7 @@ class LaMulanaWorld(World):
 
 		if self.worldstate.transition_rando:
 			transition_display_names = self.worldstate.get_transition_spoiler_names()
-			spoiler_handle.write('Transition Randomizer\n')
+			out += 'Transition Randomizer\n'
 			for source in self.worldstate.get_transition_spoiler_order():
 				if source not in self.worldstate.transition_map or source in {'Pipe L1', 'Pipe R1'}:
 					continue
@@ -261,15 +264,21 @@ class LaMulanaWorld(World):
 				if dest in {'Pipe L1', 'Pipe R1'}:
 					pipe = 'pipe'
 					dest = self.worldstate.transition_map['Pipe L1' if dest == 'Pipe R1' else 'Pipe R1']
-				spoiler_handle.write(f'    - {transition_display_names[source]}{arrows(source,dest,59,pipe,transition_display_names)}{transition_display_names[dest]}\n')
+				out += f'    - {transition_display_names[source]}{arrows(source,dest,59,pipe,transition_display_names)}{transition_display_names[dest]}\n'
 
 		if self.worldstate.door_rando:
 			doors_included = set()
-			spoiler_handle.write('Door Randomizer\n')
+			out += 'Door Randomizer\n'
 			for source, (dest, requirement) in self.worldstate.door_map.items():
 				if dest not in doors_included:
 					doors_included.add(source)
-					spoiler_handle.write(f'    - {source}{arrows(source,dest,40,requirement)}{dest}\n')
+					out += f'    - {source}{arrows(source,dest,40,requirement)}{dest}\n'
+		return out
+
+	def write_spoiler_header(self, spoiler_handle: TextIO) -> None:
+		spoiler_handle.write(f'Cursed Chests ({len(self.worldstate.cursed_chests)}):\n')
+		spoiler_handle.write(f'    - {self.worldstate.cursed_chests if len(self.worldstate.cursed_chests) else "None"}\n')
+		spoiler_handle.write(self.make_transition_info_str())
 
 	def fill_slot_data(self) -> dict[str, object]:
 		slot_data: dict[str, object] = {}
