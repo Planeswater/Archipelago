@@ -315,38 +315,35 @@ def create_regions_and_locations(world: 'LaMulanaWorld'):
 	if not worldstate.door_rando:
 		get_and_connect_doors(multiworld, player, worldstate, s)
 
-	if worldstate.transition_rando:
-		transition_entrances = None
-		success = False
+	if not worldstate.transition_rando:
+		get_and_connect_transitions(multiworld, player, worldstate, s)
+
+	if worldstate.transition_rando or worldstate.door_rando:
+		# Keep track of all the connected entrances that have been built so far (all base connections + unshuffled)
+		# If accessibility fails, revert to these entrances/exits and try again
+		base_exits = {}
+		base_entrances = {}
+		for region in multiworld.get_regions(player):
+			base_exits[region.name] = region.exits.copy()
+			base_entrances[region.name] = region.entrances.copy()
+
 		simulated_state = worldstate.build_simulated_state()
+
+		success = False
 		while not success:
-			remove_entrances(multiworld, player, transition_entrances)
-			worldstate.randomize_transitions(s)
-			transition_entrances = get_and_connect_transitions(multiworld, player, worldstate, s)
+			for region in multiworld.get_regions(player):
+				region.exits = base_exits[region.name].copy()
+				region.entrances = base_entrances[region.name].copy()
+
+			if worldstate.transition_rando:
+				worldstate.randomize_transitions(s)
+				get_and_connect_transitions(multiworld, player, worldstate, s)
 
 			if worldstate.door_rando:
 				worldstate.randomize_doors(s)
-				transition_entrances.update(get_and_connect_doors(multiworld, player, worldstate, s))
+				get_and_connect_doors(multiworld, player, worldstate, s)
 
 			success = worldstate.layout_fulfills_accessibility(simulated_state)
-	else:
-		if worldstate.door_rando:
-			worldstate.randomize_doors(s)
-			get_and_connect_doors(multiworld, player, worldstate, s)
-		get_and_connect_transitions(multiworld, player, worldstate, s)
-
-
-def remove_entrances(multiworld: MultiWorld, player: int, to_remove: set[Entrance] | None):
-	if not to_remove:
-		return
-	for region in multiworld.get_regions(player):
-		for n in range(len(region.exits) - 1, -1, -1):
-			entrance = region.exits[n]
-			if entrance in to_remove:
-				to_remove.remove(entrance)
-				entrance.connected_region.entrances.remove(entrance)
-				region.exits.remove(entrance)
-
 
 def get_and_connect_transitions(multiworld: MultiWorld, player: int, worldstate: LaMulanaWorldState, s: LaMulanaLogicShortcuts):
 	entrances: set[Entrance] = set()
@@ -401,7 +398,7 @@ def connect_transitions(multiworld: MultiWorld, player: int, source: LaMulanaTra
 		transition_logic = source.in_logic
 	else:
 		transition_logic = destination.out_logic
-	entrances.add(connect(multiworld, player, source.region, destination.region, transition_logic))
+	entrances.add(connect(multiworld, player, source.region, destination.region, transition_logic, source.vanilla_destination))
 
 	if both_ways:
 		entrances.update(connect_transitions(multiworld, player, destination, source, False))
@@ -433,17 +430,17 @@ def get_and_connect_doors(multiworld: MultiWorld, player: int, worldstate: LaMul
 					connection_logic = lambda state: s.state_key_fairy_access(state, False) and (state.can_reach_region('Gate of Illusion [Middle]', player) or s.state_backside_warp(state))
 
 			if target_name == 'Endless One-way Exit':
-				entrances.add(connect(multiworld, player, door_data.region, target.region, lambda state: connection_logic(state) and state.has('Holy Grail', player) if callable(connection_logic) else lambda state: state.has('Holy Grail', player)))
+				entrances.add(connect(multiworld, player, door_data.region, target.region, lambda state: connection_logic(state) and state.has('Holy Grail', player) if callable(connection_logic) else lambda state: state.has('Holy Grail', player), door_name))
 			else:
-				entrances.add(connect(multiworld, player, door_data.region, target.region, connection_logic))
+				entrances.add(connect(multiworld, player, door_data.region, target.region, connection_logic, door_name))
 	return entrances
 
 
-def connect(multiworld: MultiWorld, player: int, source: str, target: str, logic: Callable[[CollectionState], bool] | None = None):
+def connect(multiworld: MultiWorld, player: int, source: str, target: str, logic: Callable[[CollectionState], bool] | None = None, named_connection=None):
 	source_region = multiworld.get_region(source, player)
 	target_region = multiworld.get_region(target, player)
 
-	connection = Entrance(player, source + ' -> ' + target, source_region)
+	connection = Entrance(player, source + (' (' + named_connection + ')' if named_connection else '') + ' -> ' + target, source_region)
 
 	if logic:
 		connection.access_rule = logic
