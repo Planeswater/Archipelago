@@ -37,7 +37,7 @@ class LaMulanaWorldState:
 	door_map: dict[str, tuple[str, str]]= {}
 	npc_rando: bool
 	include_dracuet: bool
-	npc_mapping: dict[str, str]
+	npc_map: dict[str, str]
 	cursed_chests: set[str]
 	seal_map: dict[str, int]
 	is_surface_start: bool
@@ -58,7 +58,7 @@ class LaMulanaWorldState:
 		self.set_cursed_chests()
 		self.set_seal_values()
 		if self.npc_rando:
-			self.build_npc_mapping()
+			self.build_npc_map()
 
 	# Called in Regions.py after "internal" regions (within the same field, or fixed exits) have been connected
 	# and immediately before using worldstate to connect transitions and doors
@@ -186,7 +186,7 @@ class LaMulanaWorldState:
 			# Make sure shops aren't made inaccessible due to the transition map, since we will place progression (ammo) on them
 			# Reaching Fobos, Mulbruk, and Fairy Queen is already covered by the seed being beatable
 			if not state.can_reach_region('Gate of Time [Surface]', self.player):
-				if self.shop_npc_found({'8-bit Elder'}) or self.npc_mapping['8-bit Elder'] == 'Elder Xelpud':
+				if self.shop_npc_found({'8-bit Elder'}) or self.npc_map['8-bit Elder'] == 'Elder Xelpud':
 					return False
 			return True
 
@@ -248,7 +248,7 @@ class LaMulanaWorldState:
 		shop_npc_found = False
 		shop_names = self.get_shop_names()
 		for door in npc_doors:
-			if self.npc_mapping[door] in shop_names:
+			if self.npc_map[door] in shop_names:
 				return True
 		return False
 
@@ -258,13 +258,13 @@ class LaMulanaWorldState:
 			starting_weapon = starting_weapon_names[self.world.options.StartingWeapon.value]
 			if starting_weapon in {'Knife', 'Rolling Shuriken', 'Flare Gun', 'Bomb', 'Caltrops'}:
 				# Case: starting weapon can't break Mekuri Wall - Xelpud must be vanilla, with a shop available
-				if self.npc_mapping['Elder Xelpud'] != 'Elder Xelpud':
+				if self.npc_map['Elder Xelpud'] != 'Elder Xelpud':
 					return False
 				if not self.shop_npc_found({'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}):
 					return False
 			else:
 				# Xelpud must be vanilla or at former mekuri master
-				if self.npc_mapping['Former Mekuri Master'] == 'Elder Xelpud':
+				if self.npc_map['Former Mekuri Master'] == 'Elder Xelpud':
 					# Case: subweapon that can break mekuri wall, ammo needs to be at xelpud
 					if starting_weapon in {'Shuriken', 'Chakram', 'Pistol', 'Earth Spear'}:
 						if not self.shop_npc_found({'Elder Xelpud'}):
@@ -273,37 +273,37 @@ class LaMulanaWorldState:
 						# Case: main weapon that can break mekuri wall. Shop anywhere else
 						if not self.shop_npc_found({'Elder Xelpud', 'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}):
 							return False
-				elif self.npc_mapping['Elder Xelpud'] != 'Elder Xelpud':
+				elif self.npc_map['Elder Xelpud'] != 'Elder Xelpud':
 					return False
 				if not self.shop_npc_found({'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}):
 					return False
 		else:
 			# Non-surface start - just make Xelpud isn't locked behind himself
 			for surface_npc in {'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}:
-				if self.npc_mapping[surface_npc] == 'Elder Xelpud':
+				if self.npc_map[surface_npc] == 'Elder Xelpud':
 					return False
-				if self.npc_mapping[surface_npc] == 'Yiegah Kungfu' and self.npc_mapping['Yiear Kungfu'] == 'Elder Xelpud':
+				if self.npc_map[surface_npc] == 'Yiegah Kungfu' and self.npc_map['Yiear Kungfu'] == 'Elder Xelpud':
 					return False
-				if self.npc_mapping[surface_npc] == 'Fairy Queen' and self.npc_mapping['Mr. Fishman (Alt)'] == 'Elder Xelpud':
+				if self.npc_map[surface_npc] == 'Fairy Queen' and self.npc_map['Mr. Fishman (Alt)'] == 'Elder Xelpud':
 					return False
 		# Unless fixed, the door to the Moonlight shop area (Kingvalley II) does not open during escape
-		if self.npc_mapping['Kingvalley II'] == 'Mulbruk':
+		if self.npc_map['Kingvalley II'] == 'Mulbruk':
 			return False
-		if self.npc_mapping['Yiear Kungfu'] == 'Yiegah Kungfu':
+		if self.npc_map['Yiear Kungfu'] == 'Yiegah Kungfu':
 			return False
-		if self.npc_mapping['Mr. Fishman (Alt)'] == 'Fairy Queen':
+		if self.npc_map['Mr. Fishman (Alt)'] == 'Fairy Queen':
 			return False
-		if self.npc_mapping['Mr. Fishman (Alt)'] == 'Yiegah Kungfu' and self.npc_mapping['Yiear Kungfu'] == 'Fairy Queen':
+		if self.npc_map['Mr. Fishman (Alt)'] == 'Yiegah Kungfu' and self.npc_map['Yiear Kungfu'] == 'Fairy Queen':
 			return False
 		if not self.transition_rando and not self.include_nonboss:
-			if self.npc_mapping['8-bit Elder'] == 'Fairy Queen':
+			if self.npc_map['8-bit Elder'] == 'Fairy Queen':
 				return False
-			if self.npc_mapping['8-bit Elder'] == 'Yiegah Kungfu' and self.npc_mapping['Yiear Kungfu'] == 'Fairy Queen':
+			if self.npc_map['8-bit Elder'] == 'Yiegah Kungfu' and self.npc_map['Yiear Kungfu'] == 'Fairy Queen':
 				return False
-		if 'Tailor Dracuet' in self.npc_mapping:
-			if self.npc_mapping['Tailor Dracuet'] in {'Mulbruk', 'Fairy Queen', 'Elder Xelpud'}:
+		if 'Tailor Dracuet' in self.npc_map:
+			if self.npc_map['Tailor Dracuet'] in {'Mulbruk', 'Fairy Queen', 'Elder Xelpud'}:
 				return False
-			if self.npc_mapping['Tailor Dracuet'] == 'Yiegah Kungfu' and self.npc_mapping['Yiear Kungfu'] in {'Mulbruk', 'Fairy Queen', 'Elder Xelpud'}:
+			if self.npc_map['Tailor Dracuet'] == 'Yiegah Kungfu' and self.npc_map['Yiear Kungfu'] in {'Mulbruk', 'Fairy Queen', 'Elder Xelpud'}:
 				return False
 		return True
 
@@ -312,11 +312,11 @@ class LaMulanaWorldState:
 		npcs.extend(['Hiner', 'Moger', 'Priest Zarnac', 'Priest Xanado', 'Priest Madomo', 'Priest Hidlyda', 'Priest Gailious', 'Priest Romancis', 'Priest Aramo', 'Priest Triton', 'Priest Jaguarfiv', 'duplex', 'Giant Thexde', 'Samieru', 'Naramura', 'Priest Laydoc', 'Priest Ashgine', '8-bit Elder'])
 		return npcs
 
-	def build_npc_mapping(self):
+	def build_npc_map(self):
 		npc_names = self.get_npc_names()
-		self.npc_mapping = self.randomize_npcs(npc_names)
+		self.npc_map = self.randomize_npcs(npc_names)
 		while not self.npc_rando_checks_passed():
-			self.npc_mapping = self.randomize_npcs(npc_names)
+			self.npc_map = self.randomize_npcs(npc_names)
 
 	def set_cursed_chests(self):
 		if self.randomize_cursed_chests:

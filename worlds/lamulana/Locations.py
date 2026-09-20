@@ -376,7 +376,7 @@ def get_locations_by_region(world: "LaMulanaWorld | None") -> dict[str, list[Loc
 			LocationData('Shrine of the Mother - Katana Coin Chest', 2359105, lambda state: state.has('Katana', player), is_cursable=True, file_type='rcd', zones=[9,18], room=6, screen=0, object_type=0x2c, obtain_flag=0x216, item_id=-10)
 		])
 		locations['Gate of Illusion [Middle]'].extend([
-			LocationData('Gate of Illusion - Katana Coin Chest', 2359106, lambda state: state.has('Katana', player), is_cursable=True, file_type='rcd', zones=[10], room=6, screen=0, object_type=0x2c, obtain_flag=0x233, item_id=-10)
+			LocationData('Gate of Illusion - Katana Coin Chest', 2359106, lambda state: state.has('Katana', player), is_cursable=True, file_type='rcd', zones=[10], room=6, screen=0, object_type=0x2c, obtain_flag=0x233, item_id=-4)
 		])
 		locations['Gate of Illusion [Lower]'] = [
 			LocationData('Gate of Illusion - Spikes Coin Chest', 2359107, lambda state: s.attack_chest(state), is_cursable=True, file_type='rcd', zones=[10], room=9, screen=0, object_type=0x2c, obtain_flag=0x22c, item_id=-10)

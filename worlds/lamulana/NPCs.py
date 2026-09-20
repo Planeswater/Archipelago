@@ -188,8 +188,8 @@ def get_npc_entrances(world: 'LaMulanaWorld', s: LaMulanaLogicShortcuts) -> dict
 	player = world.player
 	worldstate = world.worldstate
 	npc_checks = get_npc_checks(world)
-	if worldstate.npc_rando and worldstate.npc_mapping:
-		get_entrance_checks = lambda door: npc_checks[worldstate.npc_mapping[door]] if door in worldstate.npc_mapping and worldstate.npc_mapping[door] in npc_checks else []
+	if worldstate.npc_rando and worldstate.npc_map:
+		get_entrance_checks = lambda door: npc_checks[worldstate.npc_map[door]] if door in worldstate.npc_map and worldstate.npc_map[door] in npc_checks else []
 	else:
 		get_entrance_checks = lambda door: npc_checks[door] if door in npc_checks else []
 

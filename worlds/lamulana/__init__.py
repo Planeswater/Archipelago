@@ -129,10 +129,10 @@ class LaMulanaWorld(World):
 				pipe = True
 			return transition_display_names[target] + (' (Pipe)' if pipe else '')
 
-		if self.worldstate.npc_rando and self.worldstate.npc_mapping:
+		if self.worldstate.npc_rando and self.worldstate.npc_map:
 			room_names = get_npc_entrance_room_names()
 			npc_checks = get_npc_checks(self)
-			reverse_map = {y: x for x, y in self.worldstate.npc_mapping.items()}
+			reverse_map = {y: x for x, y in self.worldstate.npc_map.items()}
 			npc_transition_info = {
 				'Priest Hidlyda': 'Spring D1',
 				'Philosopher Giltoriyo': 'Spring D1',
@@ -213,10 +213,10 @@ class LaMulanaWorld(World):
 		def space_count(name):
 			return ' ' * (25 - len(name))
 
-		if self.worldstate.npc_rando and self.worldstate.npc_mapping:
+		if self.worldstate.npc_rando and self.worldstate.npc_map:
 			spoiler_handle.write('NPC Randomizer:\n')
 			room_names = get_npc_entrance_room_names()
-			reverse_map = {y: x for x, y in self.worldstate.npc_mapping.items()}
+			reverse_map = {y: x for x, y in self.worldstate.npc_map.items()}
 			for npc_name in self.worldstate.get_npc_hint_order():
 				if npc_name in reverse_map:
 					npc_door = reverse_map[npc_name]
@@ -313,13 +313,13 @@ class LaMulanaWorld(World):
 		slot_data['player_id'] = self.player
 		slot_data['players'] = [{"id": player_id, "name": self.multiworld.player_name[player_id]} for player_id in self.multiworld.player_ids]
 		if self.worldstate.npc_rando:
-			slot_data['npc_locations'] = self.worldstate.npc_mapping
+			slot_data['npc_map'] = self.worldstate.npc_map
 		if self.options.RandomizeSeals:
-			slot_data['seal_data'] = self.worldstate.seal_map
+			slot_data['seal_map'] = self.worldstate.seal_map
 		if self.worldstate.transition_rando:
-			slot_data['transition_data'] = self.worldstate.transition_map
+			slot_data['transition_map'] = self.worldstate.transition_map
 		if self.worldstate.door_rando:
-			slot_data['door_data'] = self.worldstate.door_map
+			slot_data['door_map'] = self.worldstate.door_map
 		return slot_data
 
 	def export_location(self, location):
@@ -383,7 +383,7 @@ class LaMulanaWorld(World):
 			if self.worldstate.npc_rando:
 				surface_shop_slots = []
 				npc_checks = get_npc_checks(self)
-				if self.worldstate.npc_mapping['Former Mekuri Master'] == 'Elder Xelpud':
+				if self.worldstate.npc_map['Former Mekuri Master'] == 'Elder Xelpud':
 					if starting_weapon in {'Shuriken', 'Chakram', 'Pistol', 'Earth Spear'}:
 						# Case: Xelpud is at Former Mekuri Master and starting subweapon that can break the wall - WorldState made sure a shop was at Xelpud
 						possible_shop_npcs = {'Elder Xelpud'}
@@ -394,7 +394,7 @@ class LaMulanaWorld(World):
 					# Case: Xelpud is vanilla
 					possible_shop_npcs = {'Nebur', 'Sidro', 'Modro', 'Moger', 'Hiner'}
 				for surface_npc_door in possible_shop_npcs:
-					npc_name = self.worldstate.npc_mapping[surface_npc_door]
+					npc_name = self.worldstate.npc_map[surface_npc_door]
 					if npc_name in npc_checks:
 						for loc in npc_checks[npc_name]:
 							if loc.name in shop_locations:
@@ -564,13 +564,7 @@ class LaMulanaWorld(World):
 		return item
 
 	def get_filler_item(self, k: int | None):
-		# Temporary placeholder for filler items until more involved RCD edits can be implemented and tested
 		return 'Shell Horn'
-		if k == 0:
-			return '200 coins'
-		elif k and k <= 2:
-			return '100 coins'
-		return self.random.choices(['50 coins', '30 coins', '10 coins', '1 Weight'], weights=[1, 4, 6, 2], k=1)[0]
 
 	def place_locked_item(self, location_name: str, item_name: str):
 		self.get_location(location_name).place_locked_item(self.create_item(item_name))
